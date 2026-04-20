@@ -1,4 +1,6 @@
-# Developer Guidelines
+# Developer Guideline
+
+![Antigravity Quota Quickcheck Logo](assets/icons/logo.png)
 
 This document contains instructions for developing, modifying, and publishing the Antigravity Quota Quickcheck extension.
 

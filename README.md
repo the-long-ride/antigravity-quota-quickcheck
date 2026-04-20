@@ -1,6 +1,8 @@
 # Antigravity Quota Quickcheck
 
-A native VS Code extension that adds a quick and easy way to check your Antigravity Quota directly from the status bar.
+![Antigravity Quota Quickcheck Logo](assets/icons/logo.png)
+
+Check your Antigravity AI model quota directly from the VS Code status bar.
 
 ## ✨ Features
 
@@ -21,7 +23,7 @@ To install the extension for your daily programming workflow:
 ## 🚀 Usage
 
 1. Once installed, look at the bottom right corner of your VS Code editor.
-2. You will see the **`🚀 Antigravity Quota`** item in the status bar.
+2. You will see the **`💳 Antigravity Quota`** item in the status bar.
 3. Click it to open the quota dropdown menu.
 4. The popup will display all your available models, remaining requests, and when the quota refreshes. Click anywhere else or press `Esc` to close it.
 
