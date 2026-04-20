@@ -31,6 +31,10 @@ To install the extension for your daily programming workflow:
 
 This extension does not collect any data from the user. It is a client-side extension that displays data that is already available to the user in the Antigravity extension.
 
+## Special Thanks
+
+Special thanks to [llegomark](https://github.com/llegomark) for the [ag-telemetry](https://github.com/llegomark/ag-telemetry) source that helped me complete this extension.
+
 ## License
 
 This extension is licensed under the MIT License.
