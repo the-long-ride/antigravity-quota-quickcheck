@@ -2,7 +2,7 @@
 
 ![Antigravity Quota Quickcheck Logo](assets/icons/logo.png)
 
-Check your Antigravity AI model quota directly from the VS Code status bar.
+Check your Antigravity AI model quota directly from the VS Code status bar in 1 click.
 
 ## ✨ Features
 
@@ -14,7 +14,7 @@ Check your Antigravity AI model quota directly from the VS Code status bar.
 
 To install the extension for your daily programming workflow:
 
-1. Download the `antigravity-quota-quickcheck-0.0.1.vsix` file.
+1. Download the `antigravity-quota-quickcheck-{{version}}.vsix` file.
 2. Go to the **Extensions view** (`Ctrl+Shift+X` or `Cmd+Shift+X`) in VS Code.
 3. Click the **`...`** (Views and More Actions) menu in the top right corner of the Extensions panel.
 4. Select **"Install from VSIX..."**
