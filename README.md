@@ -19,6 +19,7 @@ Monitor your Google AI model quotas and credit balance directly from your VS Cod
 ### 🚀 Key Features
 - **Smart Status Bar**: See your active model's quota percentage instantly.
 - **Rich Dashboards**: Hover for a detailed breakdown of credits and reset times.
+- **Customizable Refresh**: Adjust the polling interval via the status bar or tooltip settings.
 - **One-Click QuickPick**: Instant access to all model stats in a clean, searchable list.
 
 ### 📦 Quick Start

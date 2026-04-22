@@ -1,13 +1,13 @@
 {
   "name": "antigravity-quota-quickcheck",
   "displayName": "Antigravity Quota Quickcheck",
-  "description": "Check Antigravity quota from the status bar",
-  "version": "1.1.0",
+  "description": "Monitor your Google AI model quotas and credit balance directly from your Antigravity status bar with 1 click or hovering.",
+  "version": "1.1.1",
   "publisher": "the-long-ride",
   "icon": "assets/icons/logo.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/local/antigravity-quota-quickcheck.git"
+    "url": "https://github.com/the-long-ride/antigravity-quota-quickcheck.git"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -23,7 +23,11 @@
     "commands": [
       {
         "command": "antigravity-quota.check",
-        "title": "Check Antigravity Quota"
+        "title": "Check Antigravity Quota & Google AI Credits"
+      },
+      {
+        "command": "antigravity-quota.setInterval",
+        "title": "Set Quota Refresh Interval"
       }
     ]
   },
