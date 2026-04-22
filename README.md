@@ -12,15 +12,16 @@ Monitor your Google AI model quotas and credit balance directly from your VS Cod
 - **Seamless UI**: Built natively for VS Code—no distraction, just information.
 
 ### 📸 Preview
-| Hover for Detail | Click for All Quotas |
+| Hover for Detail | Click to view all Quotas & manual refresh usage |
 | :---: | :---: |
 | ![Hover Preview](assets/demo-pics/hover-on-status-bar-item.png) | ![Click Preview](assets/demo-pics/click-on-status-bar-item.png) |
 
 ### 🚀 Key Features
-- **Smart Status Bar**: See your active model's quota percentage instantly.
-- **Rich Dashboards**: Hover for a detailed breakdown of credits and reset times.
-- **Customizable Refresh**: Adjust the polling interval via the status bar or tooltip settings.
-- **One-Click QuickPick**: Instant access to all model stats in a clean, searchable list.
+- **Smart Active Model Tracking**: Automatically detects your most recently used model and highlights its quota in the status bar.
+- **Rich Hover Tooltip**: Hover for a detailed, stroke-less breakdown of your plan tier, remaining AI credits, and model reset times.
+- **Clean Workspace**: Use the "Minimize" feature in the tooltip to hide the quota text and keep only the icon visible in the status bar.
+- **Customizable Refresh**: Adjust the polling interval on-the-fly directly from the tooltip.
+- **One-Click QuickPick**: Click the status bar item for instant access to all model stats in a clean, searchable list.
 
 ### 📦 Quick Start
 1. Open **Extensions** (`Ctrl+Shift+X`).

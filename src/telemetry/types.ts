@@ -14,4 +14,5 @@ export interface FullStatus {
     quotas: QuotaData[];
     /** The label of the model currently set as the active/primary model */
     activeModel: string | null;
+    planTier?: string | null;
 }

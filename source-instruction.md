@@ -9,9 +9,9 @@ A Visual Studio Code extension built in TypeScript that securely fetches and dis
 
 The project has been modularized for maintainability:
 
-- `src/extension.ts`: The lightweight UI and lifecycle entry point. Handles extension activation, registers the status bar items, and manages the polling interval timer.
+- `src/extension.ts`: The lightweight UI and lifecycle entry point. Handles extension activation, registers the status bar item, and manages the polling interval timer.
 - `src/ui/`: Contains all UI rendering logic.
-  - `statusBar.ts`: Manages the text and state of the bottom status bar items.
+  - `statusBar.ts`: Manages the text and state of the bottom status bar item.
   - `tooltip.ts`: Generates the rich Markdown hover panel (with tables and SVG images).
   - `quickPick.ts`: Generates the native VS Code dropdown menu (`showQuotaPopup`).
   - `helpers.ts`: Shared utilities for formatting numbers and building progress bars.
@@ -27,7 +27,7 @@ The project has been modularized for maintainability:
 
 ### 1. Extension Activation & Polling
 - **Trigger**: The extension is activated implicitly via `onStartupFinished`.
-- **Flow**: Registers two status bar items: one for the quota/credits (right), and one for the polling interval setting (left). It starts a `setInterval` loop that fetches data in the background.
+- **Flow**: Registers a single status bar item for the quota/credits (right side). It starts a `setInterval` loop that fetches data in the background.
 
 ### 2. Telemetry Acquisition (The "Magic")
 Because the main Antigravity extension doesn't expose a public API, `src/telemetry/` uses the following workflow to get real data:
@@ -39,10 +39,10 @@ Because the main Antigravity extension doesn't expose a public API, `src/telemet
 6. **Parsing**: Normalizes the response, sorting quotas in descending order (highest % first).
 
 ### 3. UI Display & Interactivity
-- **Status Bar**: Displays the active model's percentage and remaining Google AI credits.
-- **Hover Tooltip**: Renders a rich Markdown table with battery SVG icons for visual indicators. Includes a link to change the polling interval.
+- **Status Bar**: Displays the active model's percentage and remaining AI credits. Features a smart tracker that defaults to the highest quota model or detects quota decreases to highlight the exact model you are actively using.
+- **Hover Tooltip**: Renders a rich HTML-based table (to avoid VS Code's default Markdown table borders) with battery SVG icons for visual indicators. Includes interactive `<kbd>` buttons to change the polling interval or minimize the status bar text.
 - **QuickPick**: Clicking the main status bar item opens a searchable dropdown with progress bars (`█` and `░`).
-- **Settings**: Clicking the interval status bar item (or the tooltip link) triggers an InputBox to adjust the background polling rate dynamically.
+- **Settings**: Clicking the interval setting or minimize button in the tooltip dynamically adjusts background behavior and UI visibility.
 
 ## 🤖 AI Guidelines
 - **UI Strictness**: Strictly use native VS Code components (QuickPick, InformationMessages, MarkdownStrings) to create popup experiences. Do NOT use Webview Panels.

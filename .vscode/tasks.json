@@ -6,12 +6,21 @@
       "script": "watch",
       "problemMatcher": "$tsc-watch",
       "isBackground": true,
+      "dependsOn": "npm: compile",
       "presentation": {
         "reveal": "never"
       },
       "group": {
         "kind": "build",
         "isDefault": true
+      }
+    },
+    {
+      "type": "npm",
+      "script": "compile",
+      "problemMatcher": "$tsc",
+      "presentation": {
+        "reveal": "silent"
       }
     }
   ]

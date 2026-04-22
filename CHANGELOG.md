@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-04-22
+
+### Added
+- **Smart Active Model Tracker**: Automatically highlights the model you are actively using in the status bar (with a smart fallback to the highest quota).
+- **Minimize UI Mode**: Added a toggle in the tooltip to hide the status bar usage text for a cleaner workspace.
+- **HTML Hover Panel**: Refined the tooltip using borderless HTML tables and theme-aware `<kbd>` action buttons.
+- **Plan Tier**: Display user's plan tier in the tooltip.
+
+### Changed
+- **Real-time Reliability**: Removed the response-level `CACHE_TTL` to ensure all manual checks and hovers display perfectly up-to-date data.
+- **Code Centralization**: Extracted all hardcoded UI strings and commands into a centralized `constants.ts`.
+- **UI Polishing**: Right-aligned the tooltip footer actions and hints for a more professional layout.
+
 ## [1.1.1] - 2026-04-22
 
 ### Added
