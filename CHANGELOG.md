@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.2] - 2026-04-22
+## [1.1.2 & 1.1.3] - 2026-04-22
 
 ### Added
 - **Smart Active Model Tracker**: Automatically highlights the model you are actively using in the status bar (with a smart fallback to the highest quota).
