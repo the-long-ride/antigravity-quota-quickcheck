@@ -20,6 +20,7 @@ The project has been modularized for maintainability:
   - `process.ts`: Contains OS-level logic to scan processes and ports (Windows, Mac, Linux).
   - `client.ts`: Handles the raw HTTP POST request to the local Language Server.
   - `parser.ts`: Normalizes raw JSON responses into clean `FullStatus` and `QuotaData` interfaces.
+- `src/telemetry/types.ts`: Shared interfaces including `ModelUsageEvent` for tracking recent activity.
 - `package.json`: Contains the VS Code extension manifest (activation events, commands like `antigravity-quota.setInterval`).
 - `assets/icons/`: Contains custom branding and the dynamic SVG battery icons.
 
@@ -39,8 +40,8 @@ Because the main Antigravity extension doesn't expose a public API, `src/telemet
 6. **Parsing**: Normalizes the response, sorting quotas in descending order (highest % first).
 
 ### 3. UI Display & Interactivity
-- **Status Bar**: Displays the active model's percentage and remaining AI credits. Features a smart tracker that defaults to the highest quota model or detects quota decreases to highlight the exact model you are actively using.
-- **Hover Tooltip**: Renders a rich HTML-based table (to avoid VS Code's default Markdown table borders) with battery SVG icons for visual indicators. Includes interactive `<kbd>` buttons to change the polling interval or minimize the status bar text.
+- **Status Bar**: Displays the **recently used model's** percentage and remaining AI credits. Features a smart tracker that calculates the "hardest working" model by recording quota drops into a sliding window (`usageHistory`), which defaults to 5 minutes but is **user-customizable** via the tooltip.
+- **Hover Tooltip**: Renders a rich HTML-based table (to avoid VS Code's default Markdown table borders) with battery SVG icons for visual indicators. The recently used model is highlighted with a pulse icon (**$(pulse)**) and bold text. Includes interactive action links to change the polling interval or the tracking period.
 - **QuickPick**: Clicking the main status bar item opens a searchable dropdown with progress bars (`█` and `░`).
 - **Settings**: Clicking the interval setting or minimize button in the tooltip dynamically adjusts background behavior and UI visibility.
 

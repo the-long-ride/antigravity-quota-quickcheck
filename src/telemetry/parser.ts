@@ -19,7 +19,7 @@ export function parseFullStatus(raw: any): FullStatus {
   const configs = raw?.userStatus?.cascadeModelConfigData?.clientModelConfigs || [];
 
   // --- Active model (Handled by client-side usage tracker in index.ts) ---
-  let activeModel: string | null = null;
+  let recentlyUsedModel: string | null = null;
 
   // --- Quotas ---
   const quotas = parseQuotaData(configs);
@@ -27,7 +27,7 @@ export function parseFullStatus(raw: any): FullStatus {
   // -- User's plan tier name
   const planTier = raw?.userStatus?.userTier?.name;
 
-  return { credits, quotas, activeModel, planTier };
+  return { credits, quotas, recentlyUsedModel, planTier };
 }
 
 export function parseQuotaData(configs: any[]): QuotaData[] {

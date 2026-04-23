@@ -13,6 +13,12 @@ export interface FullStatus {
     credits: CreditInfo | null;
     quotas: QuotaData[];
     /** The label of the model currently set as the active/primary model */
-    activeModel: string | null;
+    recentlyUsedModel: string | null;
     planTier?: string | null;
+}
+
+export interface ModelUsageEvent {
+    modelId: string;
+    timestamp: number;
+    score: number;
 }

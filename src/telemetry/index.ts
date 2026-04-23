@@ -1,4 +1,4 @@
-import { FullStatus, QuotaData } from './types';
+import { FullStatus, QuotaData, ModelUsageEvent } from './types';
 import { locateAntigravityBeacon, detectActivePort } from './process';
 import { queryServer } from './client';
 import { parseFullStatus } from './parser';
@@ -11,9 +11,27 @@ let cachedPort: number | null = null;
 
 let cachedStatus: FullStatus | null = null;
 
-// Track the last time each model's quota decreased
-const modelUsageHistory = new Map<string, number>();
-const ACTIVE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+// Array to hold our rolling log of usage events
+let usageHistory: ModelUsageEvent[] = [];
+let FIVE_MINUTES_MS = 5 * 60 * 1000; // default 5 minutes
+
+export function setUsageWindowMs(ms: number) {
+    FIVE_MINUTES_MS = ms;
+    pruneOldData(); // Prune immediately with new window
+}
+
+export function getUsageWindowMs(): number {
+    return FIVE_MINUTES_MS;
+}
+
+// Prune data older than 5 minutes
+function pruneOldData() {
+    const cutoffTime = Date.now() - FIVE_MINUTES_MS;
+    usageHistory = usageHistory.filter(event => event.timestamp > cutoffTime);
+}
+
+// Auto-prune memory every minute
+setInterval(pruneOldData, 60 * 1000);
 
 export async function fetchFullStatus(force: boolean = false): Promise<FullStatus> {
 
@@ -49,43 +67,55 @@ export async function fetchFullStatus(force: boolean = false): Promise<FullStatu
     }
 
     const newStatus = parseFullStatus(rawData);
-    updateActiveModelWithHistory(newStatus);
+    updateRecentlyUsedModelWithHistory(newStatus);
 
     cachedStatus = newStatus;
     return newStatus;
 }
 
-function updateActiveModelWithHistory(newStatus: FullStatus) {
+function updateRecentlyUsedModelWithHistory(newStatus: FullStatus) {
     // 1. Detect usage (quota decrease)
     if (cachedStatus) {
         newStatus.quotas.forEach(newQ => {
             const oldQ = cachedStatus!.quotas.find(q => q.model === newQ.model);
             if (oldQ && newQ.percent < oldQ.percent) {
-                modelUsageHistory.set(newQ.model, Date.now());
+                // Record the drop as a usage "event"
+                const drop = oldQ.percent - newQ.percent;
+                usageHistory.push({
+                    modelId: newQ.model,
+                    timestamp: Date.now(),
+                    score: drop
+                });
             }
         });
     }
 
-    // 2. Find most recent within 5-minute window
-    let recentlyUsedModel: string | null = null;
-    let maxTime = 0;
-    const now = Date.now();
-    for (const [model, time] of modelUsageHistory.entries()) {
-        if (now - time < ACTIVE_WINDOW_MS) {
-            if (time > maxTime) {
-                maxTime = time;
-                recentlyUsedModel = model;
+    // 2. Prune old data before calculation
+    pruneOldData();
+
+    // 3. Calculate hardest working model (highest total drop score)
+    let hardestWorkingModel: string | null = null;
+    if (usageHistory.length > 0) {
+        const modelScores = new Map<string, number>();
+        for (const event of usageHistory) {
+            modelScores.set(event.modelId, (modelScores.get(event.modelId) || 0) + event.score);
+        }
+
+        let highestScore = -1;
+        for (const [modelId, score] of modelScores.entries()) {
+            if (score > highestScore) {
+                highestScore = score;
+                hardestWorkingModel = modelId;
             }
-        } else {
-            modelUsageHistory.delete(model);
         }
     }
 
-    // 3. Override activeModel if usage detected
-    if (recentlyUsedModel) {
-        newStatus.activeModel = recentlyUsedModel;
+    // 4. Override recentlyUsedModel
+    if (hardestWorkingModel) {
+        newStatus.recentlyUsedModel = hardestWorkingModel;
     } else if (newStatus.quotas.length > 0) {
-        newStatus.activeModel = newStatus.quotas[0].model;
+        // Fallback to highest quota model if no recent activity
+        newStatus.recentlyUsedModel = newStatus.quotas[0].model;
     }
 }
 

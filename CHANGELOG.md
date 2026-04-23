@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.4] - 2026-04-23
+
+### Added
+- **Hardest Working Model Logic**: Improved the recently used model tracker to calculate the "hardest working" model based on usage volume (quota drops) within a sliding window (**default 5 minutes, user-customizable**), rather than just the last seen decrease.
+- **Visual "Pulse" Indicator**: The recently used model now features a pulse icon (**$(pulse)**) and bold styling in the tooltip table for better visibility.
+- **Adjustable Tracking Window**: Added a new button (**$(history)**) in the tooltip to allow users to customize the recent usage tracking window (e.g., from 5 minutes to 1 minute or 15 minutes).
+
+### Changed
+- **Code Refactor**: Renamed `activeModel` to `recentlyUsedModel` across the entire codebase for better clarity.
+- **Improved UI Labels**: Refined tooltip action labels for better clarity ("Set interval" and "Set period") and removed legacy styling for a cleaner look.
+- **Descriptive Tooltips**: Added more detailed hover tooltips for all action buttons in the status bar panel.
+- **Automatic History Pruning**: Added a background interval to prune old usage events every minute to ensure optimal memory usage.
+
 ## [1.1.2 & 1.1.3] - 2026-04-22
 
 ### Added

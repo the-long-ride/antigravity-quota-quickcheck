@@ -2,7 +2,7 @@
 
 > **One click. Zero distraction. Full control.**
 
-Monitor your Google AI model quotas and credit balance directly from your VS Code status bar. No more switching tabs to check if you're hitting limits.
+Monitor your Google AI model quotas, credit balance and most recent used model directly from your VS Code status bar. No more switching tabs to check if you're hitting limits.
 
 ---
 
@@ -17,10 +17,10 @@ Monitor your Google AI model quotas and credit balance directly from your VS Cod
 | ![Hover Preview](assets/demo-pics/hover-on-status-bar-item.png) | ![Click Preview](assets/demo-pics/click-on-status-bar-item.png) |
 
 ### 🚀 Key Features
-- **Smart Active Model Tracking**: Automatically detects your most recently used model and highlights its quota in the status bar.
-- **Rich Hover Tooltip**: Hover for a detailed, stroke-less breakdown of your plan tier, remaining AI credits, and model reset times.
-- **Clean Workspace**: Use the "Minimize" feature in the tooltip to hide the quota text and keep only the icon visible in the status bar.
-- **Customizable Refresh**: Adjust the polling interval on-the-fly directly from the tooltip.
+- **Hardest Working Model Tracking**: Automatically detects your most heavily used model (with a **pulse icon $(pulse)$** for highlighting) by monitoring usage volume (quota drops) within a sliding window (**default 5 minutes, user-adjustable**), ensuring the status bar always shows what's relevant.
+- **Rich Hover Tooltip**: Hover for a detailed, stroke-less breakdown of your plan tier, remaining AI credits, and model reset times. The active model is highlighted with a pulse icon **$(pulse)$**.
+- **Clean Workspace**: Use the "Minimize monitor" feature in the tooltip to hide the quota text and keep only the icon visible in the status bar.
+- **Customizable Intervals**: Adjust the quota refresh rate on-the-fly directly from the tooltip.
 - **One-Click QuickPick**: Click the status bar item for instant access to all model stats in a clean, searchable list.
 
 ### 📦 Quick Start

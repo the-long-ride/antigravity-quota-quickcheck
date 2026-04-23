@@ -16,6 +16,7 @@ export function buildTooltip(
     md.appendMarkdown(`${UI_TEXT.LOADING_TITLE}\n\n`);
     md.appendMarkdown("*Loading...*\n\n");
     md.appendMarkdown("---\n\n");
+    const windowBtn = `<a href="command:${COMMANDS.SET_MOST_USAGE_MODEL}" title="${UI_TEXT.SET_MOST_USAGE_MODEL_TOOLTIP}">${UI_TEXT.SET_MOST_USAGE_MODEL_LABEL}</a>`;
     const settingsBtn = `<a href="command:${COMMANDS.SET_INTERVAL}" title="${UI_TEXT.SET_INTERVAL_TOOLTIP}">${UI_TEXT.SET_INTERVAL_LABEL}</a>`;
 
     const showUsage = vscode.workspace
@@ -27,7 +28,7 @@ export function buildTooltip(
     const toggleBtn = `<a href="command:${COMMANDS.TOGGLE_USAGE}" title="${UI_TEXT.TOGGLE_USAGE_TOOLTIP}">$(eye) ${toggleLabel}</a>`;
 
     md.appendMarkdown(
-      `<div align="right">${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
+      `<div align="right">${windowBtn} &nbsp; ${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
     );
     return md;
   }
@@ -41,12 +42,12 @@ export function buildTooltip(
     balance !== null
       ? `**Remaining AI Credits:** **\`${formatNumber(balance)}\`** *(per subscription)*`
       : "**Remaining AI Credits:** *unavailable*";
-  md.appendMarkdown(`${creditLine}\n\n`);
+  md.appendMarkdown(`${creditLine}`);
+  md.appendMarkdown("<br/>");
 
   // Per-model quota table
   if (status.quotas.length > 0) {
-    md.appendMarkdown("---\n\n");
-    md.appendMarkdown("**Quota per available model:** *(per account)*\n\n");
+    md.appendMarkdown("**Model Quotas:** *(per account)*\n\n");
 
     // HTML Table
     md.appendMarkdown('<table border="0" cellspacing="0" cellpadding="4">\n');
@@ -57,9 +58,13 @@ export function buildTooltip(
     for (const q of status.quotas) {
       const bar = buildBar(q.percent, 8);
       const iconUri = getQuotaIconUri(q.percent, extensionUri);
+      const isRecentlyUsed = q.model === status.recentlyUsedModel;
+      const modelLabel = isRecentlyUsed
+        ? `<strong>$(pulse) ${q.model}</strong>`
+        : q.model;
 
       md.appendMarkdown(
-        `<tr><td><img src="${iconUri.toString()}" width="14" align="center" /> &nbsp;${q.model}</td><td>${bar} ${q.percent}%</td><td>${q.refreshTime}</td></tr>\n`,
+        `<tr><td><img src="${iconUri.toString()}" width="14" align="center" /> &nbsp;${modelLabel}</td><td>${bar} ${q.percent}%</td><td>${q.refreshTime}</td></tr>\n`,
       );
     }
 
@@ -68,6 +73,7 @@ export function buildTooltip(
   }
 
   // Hint footer
+  const windowBtn = `<a href="command:${COMMANDS.SET_MOST_USAGE_MODEL}" title="${UI_TEXT.SET_MOST_USAGE_MODEL_TOOLTIP}">${UI_TEXT.SET_MOST_USAGE_MODEL_LABEL}</a>`;
   const settingsBtn = `<a href="command:${COMMANDS.SET_INTERVAL}" title="${UI_TEXT.SET_INTERVAL_TOOLTIP}">${UI_TEXT.SET_INTERVAL_LABEL}</a>`;
 
   const showUsage = vscode.workspace
@@ -79,7 +85,7 @@ export function buildTooltip(
   const toggleBtn = `<a href="command:${COMMANDS.TOGGLE_USAGE}" title="${UI_TEXT.TOGGLE_USAGE_TOOLTIP}">$(eye) ${toggleLabel}</a>`;
 
   md.appendMarkdown(
-    `<div align="right">${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
+    `<div align="right">${windowBtn} &nbsp; ${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
   );
 
   return md;
