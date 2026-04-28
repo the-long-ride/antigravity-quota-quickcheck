@@ -9,6 +9,7 @@
     "type": "git",
     "url": "https://github.com/the-long-ride/antigravity-quota-quickcheck.git"
   },
+  "homepage": "https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck",
   "engines": {
     "vscode": "^1.80.0"
   },

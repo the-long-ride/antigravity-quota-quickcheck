@@ -1,5 +1,8 @@
 # 💳 Google AI Quota Quickcheck
 
+[![Open VSX](https://img.shields.io/open-vsx/v/the-long-ride/antigravity-quota-quickcheck?color=blue&logo=open-vsx)](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **One click. Zero distraction. Full control.**
 
 Monitor your Google AI model quotas, credit balance and most recent used model directly from your VS Code status bar. No more switching tabs to check if you're hitting limits.
@@ -23,10 +26,9 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 - **Customizable Intervals**: Adjust the quota refresh rate on-the-fly directly from the tooltip.
 - **One-Click QuickPick**: Click the status bar item for instant access to all model stats in a clean, searchable list.
 
-### 📦 Quick Start
-1. Open **Extensions** (`Ctrl+Shift+X`).
-2. Click `...` > **Install from VSIX...**
-3. Select your `.vsix` file and restart VS Code.
+### 📦 Installation
+- **Marketplace**: Install via [Open VSX Registry](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
+- **Manual**: Download the `.vsix` from releases, then `Extensions: Install from VSIX...` in VS Code.
 
 ---
 
@@ -34,4 +36,4 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 Special thanks to [llegomark](https://github.com/llegomark) for the `ag-telemetry` foundation.
 
 ---
-[GitHub](https://github.com/the-long-ride/antigravity-quota-quickcheck) | [Changelog](CHANGELOG.md) | [MIT License](LICENSE)
+[Open VSX](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck) | [GitHub](https://github.com/the-long-ride/antigravity-quota-quickcheck) | [Changelog](CHANGELOG.md) | [MIT License](LICENSE)
