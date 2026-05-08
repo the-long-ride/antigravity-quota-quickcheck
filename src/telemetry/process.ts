@@ -83,8 +83,10 @@ export async function detectActivePort(pid: number): Promise<number | null> {
             );
             output = stdout;
         } else {
+            // Using -H to suppress headers and -n for numeric addresses
+            // We search for the pid in the entire line and then extract the port
             const { stdout } = await execAsync(
-                `ss -tlnp 2>/dev/null | grep -F "pid=${pid}," | awk '{print $4}' | rev | cut -d: -f1 | rev`,
+                `ss -tlnpH 2>/dev/null | grep -F "pid=${pid},"`,
                 { timeout: 5000 }
             );
             output = stdout;
@@ -93,6 +95,18 @@ export async function detectActivePort(pid: number): Promise<number | null> {
         return null;
     }
 
-    const ports = output.split('\n').map(line => parseInt(line.trim(), 10)).filter(p => p > 0 && p < 65536);
+    const ports: number[] = [];
+    const lines = output.split('\n');
+    for (const line of lines) {
+        // Match the port in the Local Address:Port column
+        // ss output format is usually: [Address]:Port [Peer]:Port
+        // We look for a colon followed by digits and then whitespace
+        const match = line.match(/:(\d+)\s+/);
+        if (match) {
+            ports.push(parseInt(match[1], 10));
+        }
+    }
+
     return ports.length > 0 ? ports[0] : null;
 }
+
