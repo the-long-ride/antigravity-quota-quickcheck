@@ -35,7 +35,7 @@ export function buildTooltip(
 
   // Header
   md.appendMarkdown(
-    `### Your *${status.planTier || "Gemini AI"}* Subcription Usage\n\n`,
+    `### Your *${status.planTier || "Gemini AI"}* Subscription Usage\n\n`,
   );
 
   // Remaining AI Credits balance
