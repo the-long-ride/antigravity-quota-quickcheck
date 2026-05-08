@@ -80,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
       async () => {
         const currentMin = getUsageWindowMs() / 60000;
         const input = await vscode.window.showInputBox({
-          prompt: "Enter usage tracking window in minutes (e.g. 1, 5, 15)",
+          prompt: "Enter usage tracking window in minutes (e.g. 30, 60)",
           value: currentMin.toString(),
           validateInput: (text) => {
             const val = Number(text);
