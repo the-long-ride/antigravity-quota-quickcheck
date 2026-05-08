@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-05-08
+
+### Fixed
+- **Linux Compatibility**: Resolved a critical issue where model usage could not be fetched on some Linux distributions due to a protocol mismatch ("http instead of https").
+- **Automatic HTTPS Fallback**: Implemented intelligent retry logic that automatically switches to HTTPS if the local language server requires it.
+- **Robust Port Detection**: Improved port scanning on Linux by using regex-based parsing of `ss` output, eliminating dependency on fixed column indices.
+
+### Changed
+- **Extended Tracking Window**: Increased the default usage tracking window to **20 minutes** for more persistent status bar information.
+- **UI Refinement**: Polished the hover tooltip with updated labels for subscriptions and removed redundant quota hints for a cleaner interface.
+
 ## [1.1.4] - 2026-04-23
 
 ### Added
