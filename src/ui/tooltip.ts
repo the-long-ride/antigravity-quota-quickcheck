@@ -34,20 +34,22 @@ export function buildTooltip(
   }
 
   // Header
-  md.appendMarkdown(`### Your *${status.planTier}* Usage\n\n`);
+  md.appendMarkdown(
+    `### Your *${status.planTier || "Gemini AI"}* Subcription Usage\n\n`,
+  );
 
   // Remaining AI Credits balance
   const balance = status.credits?.balance ?? null;
   const creditLine =
     balance !== null
-      ? `**Remaining AI Credits:** **\`${formatNumber(balance)}\`** *(per subscription)*`
+      ? `**Remaining AI Credits:** **\`${formatNumber(balance)}\`**`
       : "**Remaining AI Credits:** *unavailable*";
   md.appendMarkdown(`${creditLine}`);
   md.appendMarkdown("<br/>");
 
   // Per-model quota table
   if (status.quotas.length > 0) {
-    md.appendMarkdown("**Model Quotas:** *(per account)*\n\n");
+    md.appendMarkdown("**Model Quotas:**\n\n");
 
     // HTML Table
     md.appendMarkdown('<table border="0" cellspacing="0" cellpadding="4">\n');
