@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.1.5] - 2026-05-08
+## [1.1.5 ~ 1.1.6] - 2026-05-08
 
 ### Fixed
 - **Linux Compatibility**: Resolved a critical issue where model usage could not be fetched on some Linux distributions due to a protocol mismatch ("http instead of https").

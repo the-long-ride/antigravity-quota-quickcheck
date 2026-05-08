@@ -36,7 +36,9 @@ export async function locateAntigravityBeacon(): Promise<{ pid: number; token: s
 
     if (os === 'win32') {
         try {
-            const data = JSON.parse(output);
+            const trimmedOutput = output.trim();
+            if (!trimmedOutput) return null;
+            const data = JSON.parse(trimmedOutput);
             const processes = Array.isArray(data) ? data : [data];
 
             for (const proc of processes) {
@@ -96,12 +98,15 @@ export async function detectActivePort(pid: number): Promise<number | null> {
     }
 
     const ports: number[] = [];
-    const lines = output.split('\n');
+    const lines = output.split(/\r?\n/);
     for (const line of lines) {
-        // Match the port in the Local Address:Port column
-        // ss output format is usually: [Address]:Port [Peer]:Port
-        // We look for a colon followed by digits and then whitespace
-        const match = line.match(/:(\d+)\s+/);
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Match port: either just digits (Windows/macOS) or :PORT (Linux)
+        // We look for digits that are either at the start of the line or preceded by a colon,
+        // and followed by either whitespace or the end of the line.
+        const match = trimmed.match(/(?:^|:)(\d+)(?:\s|$)/);
         if (match) {
             ports.push(parseInt(match[1], 10));
         }
