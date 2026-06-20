@@ -16,7 +16,6 @@ export function buildTooltip(
     md.appendMarkdown(`${UI_TEXT.LOADING_TITLE}\n\n`);
     md.appendMarkdown("*Loading...*\n\n");
     md.appendMarkdown("---\n\n");
-    const windowBtn = `<a href="command:${COMMANDS.SET_MOST_USAGE_MODEL}" title="${UI_TEXT.SET_MOST_USAGE_MODEL_TOOLTIP}">${UI_TEXT.SET_MOST_USAGE_MODEL_LABEL}</a>`;
     const settingsBtn = `<a href="command:${COMMANDS.SET_INTERVAL}" title="${UI_TEXT.SET_INTERVAL_TOOLTIP}">${UI_TEXT.SET_INTERVAL_LABEL}</a>`;
 
     const showUsage = vscode.workspace
@@ -28,7 +27,7 @@ export function buildTooltip(
     const toggleBtn = `<a href="command:${COMMANDS.TOGGLE_USAGE}" title="${UI_TEXT.TOGGLE_USAGE_TOOLTIP}">$(eye) ${toggleLabel}</a>`;
 
     md.appendMarkdown(
-      `<div align="right">${windowBtn} &nbsp; ${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
+      `<div align="right">${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
     );
     return md;
   }
@@ -49,8 +48,6 @@ export function buildTooltip(
 
   // Per-model quota table
   if (status.quotas.length > 0) {
-    md.appendMarkdown("**Model Quotas:**\n\n");
-
     // HTML Table
     md.appendMarkdown('<table border="0" cellspacing="0" cellpadding="4">\n');
     md.appendMarkdown(
@@ -75,7 +72,6 @@ export function buildTooltip(
   }
 
   // Hint footer
-  const windowBtn = `<a href="command:${COMMANDS.SET_MOST_USAGE_MODEL}" title="${UI_TEXT.SET_MOST_USAGE_MODEL_TOOLTIP}">${UI_TEXT.SET_MOST_USAGE_MODEL_LABEL}</a>`;
   const settingsBtn = `<a href="command:${COMMANDS.SET_INTERVAL}" title="${UI_TEXT.SET_INTERVAL_TOOLTIP}">${UI_TEXT.SET_INTERVAL_LABEL}</a>`;
 
   const showUsage = vscode.workspace
@@ -87,7 +83,7 @@ export function buildTooltip(
   const toggleBtn = `<a href="command:${COMMANDS.TOGGLE_USAGE}" title="${UI_TEXT.TOGGLE_USAGE_TOOLTIP}">$(eye) ${toggleLabel}</a>`;
 
   md.appendMarkdown(
-    `<div align="right">${windowBtn} &nbsp; ${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
+    `<div align="right">${settingsBtn} &nbsp; ${toggleBtn}<br>${UI_TEXT.QUOTA_HINT}</div>`,
   );
 
   return md;

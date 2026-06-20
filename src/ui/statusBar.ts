@@ -11,12 +11,17 @@ export async function refreshStatusBar(
   try {
     const status = await fetchFullStatus(force);
     const creditBalance = status.credits?.balance ?? null;
-    const recentlyUsedModel = status.recentlyUsedModel ?? "Model";
 
-    // Find quota for the recently used model
-    const activeQuota = status.quotas.find(
-      (q) => q.model === recentlyUsedModel,
-    );
+    const monitoredModel = vscode.workspace
+      .getConfiguration("antigravity-quota")
+      .get<string>("monitoredModel");
+
+    let activeQuota = status.quotas.find((q) => q.model === monitoredModel);
+    if (!activeQuota && status.quotas.length > 0) {
+      activeQuota = status.quotas[0];
+    }
+    const recentlyUsedModel = activeQuota?.model ?? "Model";
+    status.recentlyUsedModel = activeQuota?.model ?? null;
     const activePercent = activeQuota?.percent ?? null;
 
     const showUsage = vscode.workspace

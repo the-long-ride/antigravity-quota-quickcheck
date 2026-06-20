@@ -60,21 +60,62 @@ export function parseQuotaData(configs: any[]): QuotaData[] {
   return results.sort((a, b) => b.percent - a.percent);
 }
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function getRelativeTime(isoDate: string): string {
-  const future = new Date(isoDate).getTime();
-  const now = Date.now();
-  const diffMs = future - now;
+  const futureDate = new Date(isoDate);
+  const now = new Date();
+  const diffMs = futureDate.getTime() - now.getTime();
 
   if (diffMs <= 0) return "Ready";
 
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 60) return `${minutes} minutes`;
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const remainingMinutes = totalMinutes % 60;
+  const totalHours = Math.floor(totalMinutes / 60);
+  const remainingHours = totalHours % 24;
+  const days = Math.floor(totalHours / 24);
 
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (hours < 24) return `${hours} hr, ${remainingMinutes} min`;
+  let durationStr = "";
+  if (days > 0) {
+    const dayWord = days === 1 ? "day" : "days";
+    durationStr = `${days} ${dayWord}, ${remainingHours} hr, ${remainingMinutes} mins`;
+  } else if (totalHours > 0) {
+    durationStr = `${totalHours} hr, ${remainingMinutes} mins`;
+  } else {
+    durationStr = `${remainingMinutes} mins`;
+  }
 
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  return `${days} day${days > 1 ? "s" : ""}, ${remainingHours} hr`;
+  // Format absolute time part: hh:mm AM/PM
+  const ampm = futureDate.getHours() >= 12 ? "PM" : "AM";
+  let hour12 = futureDate.getHours() % 12;
+  hour12 = hour12 ? hour12 : 12;
+  const minStr = String(futureDate.getMinutes()).padStart(2, "0");
+  const timeStr = `${hour12}:${minStr} ${ampm}`;
+
+  // Determine if it falls on the current day
+  const isCurrentDay =
+    futureDate.getDate() === now.getDate() &&
+    futureDate.getMonth() === now.getMonth() &&
+    futureDate.getFullYear() === now.getFullYear();
+
+  if (isCurrentDay) {
+    return `${durationStr} | ${timeStr}`;
+  } else {
+    const month = MONTHS[futureDate.getMonth()];
+    const day = futureDate.getDate();
+    return `${durationStr} | ${month} ${day}, ${timeStr}`;
+  }
 }

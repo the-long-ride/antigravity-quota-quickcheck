@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { refreshStatusBar } from "./ui/statusBar";
 import { showQuotaPopup } from "./ui/quickPick";
 import { buildTooltip } from "./ui/tooltip";
-import { getUsageWindowMs, setUsageWindowMs } from "./telemetry";
+
 
 // Polling interval for status bar refresh (default 30 seconds)
 let pollIntervalMs = 30_000;
@@ -73,35 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   );
 
-  // Register the usage window change command
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "antigravity-quota.setUsageWindow",
-      async () => {
-        const currentMin = getUsageWindowMs() / 60000;
-        const input = await vscode.window.showInputBox({
-          prompt: "Enter usage tracking window in minutes (e.g. 30, 60)",
-          value: currentMin.toString(),
-          validateInput: (text) => {
-            const val = Number(text);
-            if (isNaN(val) || val < 1) {
-              return "Please enter a valid number of minutes (minimum 1).";
-            }
-            return null;
-          },
-        });
 
-        if (input !== undefined) {
-          const newMinutes = Number(input);
-          setUsageWindowMs(newMinutes * 60000);
-
-          vscode.window.showInformationMessage(
-            `Antigravity usage tracking window set to ${newMinutes} minutes.`,
-          );
-        }
-      },
-    ),
-  );
 
   // Register toggle usage command
   context.subscriptions.push(
@@ -126,7 +98,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Listen for configuration changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("antigravity-quota.showUsageInStatusBar")) {
+      if (
+        e.affectsConfiguration("antigravity-quota.showUsageInStatusBar") ||
+        e.affectsConfiguration("antigravity-quota.monitoredModel")
+      ) {
         refreshStatusBar(myStatusBarItem, extensionUri);
       }
     }),

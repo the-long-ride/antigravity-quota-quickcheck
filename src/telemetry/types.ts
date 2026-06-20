@@ -17,8 +17,3 @@ export interface FullStatus {
     planTier?: string | null;
 }
 
-export interface ModelUsageEvent {
-    modelId: string;
-    timestamp: number;
-    score: number;
-}

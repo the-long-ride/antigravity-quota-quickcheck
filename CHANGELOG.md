@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-06-20
+
+### Added
+- **Manual Model Selection**: You can now choose which model to monitor in the status bar. Click the status bar or run the command to open the QuickPick modal, then select any model (the currently selected model is indicated with a checkmark).
+- **Exact Reset Times**: Updated the "Resets in" display in both the QuickPick and hover tooltip to show the exact local reset time along with the relative duration (e.g., `4 hr, 24 mins | 11:30 PM`, or `1 day, 4 hr, 25 mins | June 22, 11:30 PM`).
+
+### Changed
+- **Simplified Usage Monitoring**: Removed the background period-based hardest-working model tracking and the "Set period" button/command in favor of direct manual selection.
+- **UI Refinement**: Removed the `Model Quotas:` text label from the hover tooltip for a cleaner, more streamlined layout.
+
 ## [1.1.5 ~ 1.1.6] - 2026-05-08
 
 ### Fixed

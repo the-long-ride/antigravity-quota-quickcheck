@@ -20,7 +20,7 @@ export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
 
     const quickPick = vscode.window.createQuickPick();
     quickPick.title = "Antigravity Quota — Live";
-    quickPick.placeholder = "Real-time model quotas";
+    quickPick.placeholder = "Select a model to monitor in the status bar";
 
     const separator: vscode.QuickPickItem = {
       label: "",
@@ -32,12 +32,27 @@ export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
       alwaysShow: true,
     };
 
-    const modelItems: vscode.QuickPickItem[] = quotaData.map((item) => {
+    const monitoredModel = vscode.workspace
+      .getConfiguration("antigravity-quota")
+      .get<string>("monitoredModel");
+
+    let activeModel = monitoredModel;
+    if (quotaData.length > 0 && !quotaData.some((q) => q.model === activeModel)) {
+      activeModel = quotaData[0].model;
+    }
+
+    interface ModelQuickPickItem extends vscode.QuickPickItem {
+      modelName?: string;
+    }
+
+    const modelItems: ModelQuickPickItem[] = quotaData.map((item) => {
       const progressBar = buildBar(item.percent, 10);
       const iconUri = getQuotaIconUri(item.percent, extensionUri);
+      const isMonitored = item.model === activeModel;
 
       return {
-        label: ` ${item.model}`,
+        label: `${isMonitored ? "$(check) " : "   "}${item.model}`,
+        modelName: item.model,
         description: `${progressBar} ${item.percent}%`,
         detail: `$(clock)  Resets in: ${item.refreshTime}`,
         iconPath: iconUri,
@@ -47,7 +62,18 @@ export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
 
     quickPick.items = [creditItem, separator, ...modelItems];
 
-    quickPick.onDidAccept(() => quickPick.hide());
+    quickPick.onDidAccept(async () => {
+      const selected = quickPick.selectedItems[0] as ModelQuickPickItem;
+      if (selected && selected.modelName) {
+        const config = vscode.workspace.getConfiguration("antigravity-quota");
+        await config.update(
+          "monitoredModel",
+          selected.modelName,
+          vscode.ConfigurationTarget.Global,
+        );
+      }
+      quickPick.hide();
+    });
     quickPick.show();
   } catch (err: any) {
     vscode.window.showErrorMessage(
