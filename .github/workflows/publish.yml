@@ -35,12 +35,28 @@ jobs:
           path: '*.vsix'
 
       - name: Publish to VS Marketplace
-        run: npx @vscode/vsce publish --packagePath *.vsix
+        run: |
+          npx @vscode/vsce publish --packagePath *.vsix 2>&1 | tee vsce_output.log || {
+            if grep -q "already exists" vsce_output.log; then
+              echo "Extension version already exists in VS Marketplace, continuing..."
+              exit 0
+            else
+              exit 1
+            fi
+          }
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Publish to Open VSX
-        run: npx ovsx publish *.vsix -p ${{ secrets.OVSX_PAT }}
+        run: |
+          npx ovsx publish *.vsix -p ${{ secrets.OVSX_PAT }} 2>&1 | tee ovsx_output.log || {
+            if grep -i -q "already exists" ovsx_output.log || grep -i -q "already published" ovsx_output.log; then
+              echo "Extension version already exists in Open VSX, continuing..."
+              exit 0
+            else
+              exit 1
+            fi
+          }
 
   build-desktop:
     name: Build Desktop (${{ matrix.platform }})
