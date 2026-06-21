@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Antigravity Quota Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+    <!-- Style Sheet -->
+    <link rel="stylesheet" href="/src/styles.css" />
+    <!-- Main Script -->
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <div class="app-container">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-logo">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+            <line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="2"/>
+            <path d="M7 15H11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="app-title">Antigravity Quota</span>
+        </div>
+        <div class="header-right">
+          <button class="refresh-btn" id="refresh-btn" title="Force Refresh">
+            <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.73-.73" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode">
+            <!-- Moon (dark mode icon, shown in light mode) -->
+            <svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <!-- Sun (light mode icon, shown in dark mode) -->
+            <svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+              <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <div class="status-indicator" id="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-text" id="status-text">Connecting...</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content Scroll Area -->
+      <div class="app-content">
+        <div class="top-row">
+
+          <!-- Plan Tier Card -->
+          <div class="tier-card">
+            <span class="tier-label">Plan Tier</span>
+            <h2 class="tier-value" id="plan-tier-value">—</h2>
+          </div>
+
+          <!-- Credit Balance Card -->
+          <div class="credit-card">
+            <div class="credit-details">
+              <span class="credit-label">Remaining AI Credits</span>
+              <div class="credit-amount" id="credit-amount">$0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quotas List Section -->
+        <section class="quotas-section">
+          <h3 class="section-title">Model Quotas <span class="subtitle">(Click to monitor in tray)</span></h3>
+          <div class="quotas-list" id="quotas-list">
+            <!-- Dynamic list items will go here -->
+            <div class="loading-state">
+              <span>Loading model quotas...</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Settings Footer -->
+      <footer class="app-footer">
+        <div class="setting-item">
+          <label for="poll-interval" class="setting-label">Poll Rate (sec)</label>
+          <input type="number" id="poll-interval" min="5" max="3600" value="30" class="setting-input" />
+        </div>
+        <div class="footer-links">
+          <span class="footer-attr">made by <a href="https://github.com/the-long-ride" class="footer-link footer-link--author" id="author-link">the-long-ride</a> with ❤️</span>
+          <span class="footer-link-sep">·</span>
+          <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck" class="footer-link" id="github-link">GitHub</a>
+          <span class="footer-link-sep">·</span>
+          <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new" class="footer-link" id="report-issue-link">Report Issue</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
