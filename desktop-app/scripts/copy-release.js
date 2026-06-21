@@ -18,9 +18,9 @@ if (!fs.existsSync(outputDir)) {
 
 // 1. Copy the portable standalone binary
 const isWindows = process.platform === 'win32';
-const binaryName = isWindows ? 'antigravity-quota-tray.exe' : 'antigravity-quota-tray';
+const binaryName = isWindows ? 'Antigravity Quota Quickcheck.exe' : 'Antigravity Quota Quickcheck';
 const srcBinary = path.join(tauriReleaseDir, binaryName);
-const destBinaryName = isWindows ? 'antigravity-quota-tray-portable.exe' : 'antigravity-quota-tray-portable';
+const destBinaryName = isWindows ? 'Antigravity Quota Quickcheck-portable.exe' : 'Antigravity Quota Quickcheck-portable';
 const destBinary = path.join(outputDir, destBinaryName);
 
 if (fs.existsSync(srcBinary)) {

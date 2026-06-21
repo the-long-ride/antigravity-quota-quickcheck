@@ -4,6 +4,7 @@ import { queryServer } from "./client";
 import { parseFullStatus } from "./parser";
 
 export * from "./types";
+export { formatAbsoluteTime } from "./parser";
 
 let cachedPid: number | null = null;
 let cachedToken: string | null = null;
@@ -15,11 +16,15 @@ export async function fetchFullStatus(
   force: boolean = false,
 ): Promise<FullStatus> {
   let rawData: any;
+  let rawQuotaSummary: any;
 
   // Path A: Try cached connection
   if (cachedPid && cachedToken && cachedPort) {
     try {
-      rawData = await queryServer(cachedPort, cachedToken);
+      [rawData, rawQuotaSummary] = await Promise.all([
+        queryServer(cachedPid, cachedToken, "/exa.language_server_pb.LanguageServerService/GetUserStatus"),
+        queryServer(cachedPid, cachedToken, "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").catch(() => null)
+      ]);
     } catch {
       cachedPid = null;
       cachedToken = null;
@@ -40,12 +45,15 @@ export async function fetchFullStatus(
     cachedToken = token;
     cachedPort = port;
 
-    rawData = await queryServer(port, token);
+    [rawData, rawQuotaSummary] = await Promise.all([
+      queryServer(port, token, "/exa.language_server_pb.LanguageServerService/GetUserStatus"),
+      queryServer(port, token, "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").catch(() => null)
+    ]);
     if (!rawData)
       throw new Error("Failed to fetch data from Antigravity server.");
   }
 
-  const newStatus = parseFullStatus(rawData);
+  const newStatus = parseFullStatus(rawData, rawQuotaSummary);
 
   // Fallback to highest quota model if none is set
   if (newStatus.quotas.length > 0) {
@@ -55,4 +63,5 @@ export async function fetchFullStatus(
   cachedStatus = newStatus;
   return newStatus;
 }
+
 

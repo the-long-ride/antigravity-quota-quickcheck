@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { CONFIG, COMMANDS, UI_TEXT } from "../constants";
-import { FullStatus } from "../telemetry";
+import { FullStatus, formatAbsoluteTime } from "../telemetry";
 import { buildBar, getQuotaIconUri, formatNumber } from "./helpers";
 
 export function buildTooltip(
@@ -51,25 +51,50 @@ export function buildTooltip(
     // HTML Table
     md.appendMarkdown('<table border="0" cellspacing="0" cellpadding="4">\n');
     md.appendMarkdown(
-      "<tr><th>Model</th><th>Remaining</th><th>Resets in</th></tr>\n",
+      "<tr><th>Model</th><th>Limits &amp; Remaining</th><th>Resets at</th></tr>\n",
     );
 
     for (const q of status.quotas) {
-      const bar = buildBar(q.percent, 8);
-      const iconUri = getQuotaIconUri(q.percent, extensionUri);
+      const fiveHourBar = buildBar(q.fiveHourPercent, 6);
+      const weeklyBar = buildBar(q.weeklyPercent, 6);
+      const iconUri = getQuotaIconUri(q.fiveHourPercent, extensionUri);
       const isRecentlyUsed = q.model === status.recentlyUsedModel;
       const modelLabel = isRecentlyUsed
         ? `<strong>$(pulse) ${q.model}</strong>`
         : q.model;
 
+      const fiveHourResetStr = q.fiveHourDisabled ? "Disabled" : (q.fiveHourReset ? formatAbsoluteTime(q.fiveHourReset) : "Ready");
+      const weeklyResetStr = q.weeklyDisabled ? "Disabled" : (q.weeklyReset ? formatAbsoluteTime(q.weeklyReset) : "Ready");
+
       md.appendMarkdown(
-        `<tr><td><img src="${iconUri.toString()}" width="14" align="center" /> &nbsp;${modelLabel}</td><td>${bar} ${q.percent}%</td><td>${q.refreshTime}</td></tr>\n`,
+        `<tr>` +
+          `<td valign="middle"><img src="${iconUri.toString()}" width="14" align="center" /> &nbsp;${modelLabel}</td>` +
+          `<td>` +
+            `<table border="0" cellspacing="0" cellpadding="0">` +
+              `<tr>` +
+                `<td>5 hrs limit:&nbsp;</td>` +
+                `<td>${fiveHourBar}&nbsp;</td>` +
+                `<td align="right">${q.fiveHourPercent}%</td>` +
+              `</tr>` +
+              `<tr>` +
+                `<td>Weekly limit:&nbsp;</td>` +
+                `<td>${weeklyBar}&nbsp;</td>` +
+                `<td align="right">${q.weeklyPercent}%</td>` +
+              `</tr>` +
+            `</table>` +
+          `</td>` +
+          `<td>` +
+            `${fiveHourResetStr}<br/>` +
+            `${weeklyResetStr}` +
+          `</td>` +
+        `</tr>\n`,
       );
     }
 
     md.appendMarkdown("</table>\n\n");
     md.appendMarkdown("---\n");
   }
+
 
   // Hint footer
   const settingsBtn = `<a href="command:${COMMANDS.SET_INTERVAL}" title="${UI_TEXT.SET_INTERVAL_TOOLTIP}">${UI_TEXT.SET_INTERVAL_LABEL}</a>`;

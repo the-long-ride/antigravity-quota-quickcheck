@@ -28,6 +28,9 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 
 ### 🖥️ Standalone Desktop Tray Application
 The project now includes a **Tauri-powered standalone desktop tray application** to keep track of your quotas even when VS Code is closed.
+
+![Desktop App Preview](assets/demo-pics/Desktop-app-tray-click.png)
+
 - **System Tray Integration**: A clean tray icon with a tooltip showing remaining credits and active model quota.
 - **Floating Dashboard**: Click the tray icon to toggle a premium, lightweight, translucent overlay dashboard.
 - **Click-to-Monitor**: Click any model in the dashboard list to set it as the primary model monitored in the system tray.

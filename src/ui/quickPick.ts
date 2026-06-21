@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { fetchFullStatus } from "../telemetry";
+import { fetchFullStatus, formatAbsoluteTime } from "../telemetry";
 import { buildBar, getQuotaIconUri, formatNumber } from "./helpers";
 
 export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
@@ -46,19 +46,20 @@ export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
     }
 
     const modelItems: ModelQuickPickItem[] = quotaData.map((item) => {
-      const progressBar = buildBar(item.percent, 10);
-      const iconUri = getQuotaIconUri(item.percent, extensionUri);
       const isMonitored = item.model === activeModel;
+      const fiveHourResetStr = item.fiveHourDisabled ? "Disabled" : (item.fiveHourReset ? formatAbsoluteTime(item.fiveHourReset) : "Ready");
+      const weeklyResetStr = item.weeklyDisabled ? "Disabled" : (item.weeklyReset ? formatAbsoluteTime(item.weeklyReset) : "Ready");
 
       return {
         label: `${isMonitored ? "$(check) " : "   "}${item.model}`,
         modelName: item.model,
-        description: `${progressBar} ${item.percent}%`,
-        detail: `$(clock)  Resets in: ${item.refreshTime}`,
-        iconPath: iconUri,
+        description: `5 hrs limit: ${item.fiveHourPercent}% | Weekly limit: ${item.weeklyPercent}%`,
+        detail: `$(clock) 5 hrs limit Reset: ${fiveHourResetStr}  •  Weekly limit Reset: ${weeklyResetStr}`,
+        iconPath: getQuotaIconUri(item.fiveHourPercent, extensionUri),
         alwaysShow: true,
       };
     });
+
 
     quickPick.items = [creditItem, separator, ...modelItems];
 

@@ -8,6 +8,12 @@ interface QuotaData {
   model: string;
   percent: number;
   refreshTime: string;
+  fiveHourPercent: number;
+  fiveHourReset: string;
+  fiveHourDisabled: boolean;
+  weeklyPercent: number;
+  weeklyReset: string;
+  weeklyDisabled: boolean;
 }
 
 interface CreditInfo {
@@ -22,6 +28,9 @@ interface FullStatus {
   recentlyUsedModel: string | null;
 }
 
+
+let disabledClickCount = 0;
+
 // Global UI Elements
 const statusIndicator = document.getElementById("status-indicator")!;
 const statusText = document.getElementById("status-text")!;
@@ -32,6 +41,58 @@ const updateBtn = document.getElementById("update-btn")!;
 const refreshBtn = document.getElementById("refresh-btn")!;
 const pollIntervalInput = document.getElementById("poll-interval") as HTMLInputElement;
 const themeToggleBtn = document.getElementById("theme-toggle")!;
+
+function showCustomAlert(message: string): Promise<void> {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("custom-dialog-overlay")!;
+    const msgEl = overlay.querySelector(".dialog-message")!;
+    const okBtn = document.getElementById("dialog-ok-btn")!;
+    const cancelBtn = document.getElementById("dialog-cancel-btn") as HTMLButtonElement;
+
+    msgEl.textContent = message;
+    if (cancelBtn) cancelBtn.style.display = "none";
+    overlay.style.display = "flex";
+
+    const onOk = () => {
+      overlay.style.display = "none";
+      okBtn.removeEventListener("click", onOk);
+      resolve();
+    };
+    okBtn.addEventListener("click", onOk);
+  });
+}
+
+function showCustomConfirm(message: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById("custom-dialog-overlay")!;
+    const msgEl = overlay.querySelector(".dialog-message")!;
+    const okBtn = document.getElementById("dialog-ok-btn")!;
+    const cancelBtn = document.getElementById("dialog-cancel-btn") as HTMLButtonElement;
+
+    msgEl.textContent = message;
+    if (cancelBtn) cancelBtn.style.display = "inline-block";
+    overlay.style.display = "flex";
+
+    const cleanUp = () => {
+      overlay.style.display = "none";
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+    };
+
+    const onOk = () => {
+      cleanUp();
+      resolve(true);
+    };
+
+    const onCancel = () => {
+      cleanUp();
+      resolve(false);
+    };
+
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+  });
+}
 
 // ── Theme (persisted via localStorage) ─────────────────────────────────────
 const THEME_KEY = "antigravity-theme";
@@ -59,54 +120,33 @@ themeToggleBtn.addEventListener("click", () => {
 });
 // ───────────────────────────────────────────────────────────────────────────
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
-function getRelativeTime(isoDate: string): { duration: string; absolute: string } {
-  if (!isoDate || isoDate === "Exhausted") return { duration: "Exhausted", absolute: "" };
-  
+function formatAbsoluteTime(isoDate: string): string {
+  if (!isoDate || isoDate === "Exhausted" || isoDate === "Ready") return isoDate || "—";
   const futureDate = new Date(isoDate);
-  const now = new Date();
-  const diffMs = futureDate.getTime() - now.getTime();
+  if (isNaN(futureDate.getTime())) return "—";
 
-  if (diffMs <= 0) return { duration: "Ready", absolute: "" };
-
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const remainingMinutes = totalMinutes % 60;
-  const totalHours = Math.floor(totalMinutes / 60);
-  const remainingHours = totalHours % 24;
-  const days = Math.floor(totalHours / 24);
-
-  let durationStr = "";
-  if (days > 0) {
-    const dayWord = days === 1 ? "day" : "days";
-    durationStr = `${days} ${dayWord}, ${remainingHours} hr`;
-  } else if (totalHours > 0) {
-    durationStr = `${totalHours} hr, ${remainingMinutes} mins`;
-  } else {
-    durationStr = `${remainingMinutes} mins`;
-  }
-
-  // Format absolute time part: hh:mm AM/PM
   const ampm = futureDate.getHours() >= 12 ? "PM" : "AM";
   let hour12 = futureDate.getHours() % 12;
   hour12 = hour12 ? hour12 : 12;
   const minStr = String(futureDate.getMinutes()).padStart(2, "0");
   const timeStr = `${hour12}:${minStr} ${ampm}`;
 
+  const now = new Date();
   const isCurrentDay =
     futureDate.getDate() === now.getDate() &&
     futureDate.getMonth() === now.getMonth() &&
     futureDate.getFullYear() === now.getFullYear();
 
   if (isCurrentDay) {
-    return { duration: durationStr, absolute: timeStr };
+    return `Resets at: ${timeStr}`;
   } else {
+    const MONTHS = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
     const month = MONTHS[futureDate.getMonth()];
     const day = futureDate.getDate();
-    return { duration: durationStr, absolute: `${month} ${day}, ${timeStr}` };
+    return `Resets at: ${month} ${day}, ${timeStr}`;
   }
 }
 
@@ -160,32 +200,60 @@ function updateUI(status: FullStatus | null) {
   quotasList.innerHTML = "";
   status.quotas.forEach((q) => {
     const isMonitored = q.model === status.recentlyUsedModel;
+    const isDisabled = q.weeklyPercent === 0;
     const itemEl = document.createElement("div");
-    itemEl.className = `quota-item ${isMonitored ? "monitored" : ""}`;
+    itemEl.className = `quota-item ${isMonitored ? "monitored" : ""} ${isDisabled ? "disabled-model" : ""}`;
     
     // Add Click listener to monitor this model in system tray
     itemEl.addEventListener("click", async () => {
+      if (isDisabled) {
+        disabledClickCount++;
+        if (disabledClickCount > 3) {
+          await showCustomAlert("The model has already been exhausted!");
+        }
+        return;
+      }
       await invoke("set_monitored_model", { model: q.model });
       // Instantly trigger a refresh so tray text updates
       triggerRefresh();
     });
 
-    const resetInfo = getRelativeTime(q.refreshTime);
-    const absoluteHtml = resetInfo.absolute
-      ? `<div class="quota-reset-absolute">${resetInfo.absolute}</div>`
-      : "";
+    const fiveHourResetStr = q.fiveHourDisabled ? "Disabled" : (q.fiveHourReset ? formatAbsoluteTime(q.fiveHourReset) : "Ready");
+    const weeklyResetStr = q.weeklyDisabled ? "Disabled" : (q.weeklyReset ? formatAbsoluteTime(q.weeklyReset) : "Ready");
 
     itemEl.innerHTML = `
       <div class="quota-item-header">
         <span class="quota-model-name">${q.model}</span>
-        <span class="quota-value">${q.percent}%</span>
       </div>
-      <div class="progress-container">
-        <div class="progress-bar" style="width: ${q.percent}%;"></div>
-      </div>
-      <div class="quota-item-footer">
-        <div class="quota-reset-duration">Resets in: ${resetInfo.duration}</div>
-        ${absoluteHtml}
+      
+      <div class="quota-limits-container">
+        <!-- Five Hour Limit Column -->
+        <div class="quota-limit-col">
+          <div class="quota-limit-label-container">
+            <span class="quota-limit-name">5 hrs limit</span>
+            <span class="quota-limit-reset">${fiveHourResetStr}</span>
+          </div>
+          <div class="quota-limit-bar-container">
+            <div class="progress-container">
+              <div class="progress-bar" style="width: ${q.fiveHourPercent}%;"></div>
+            </div>
+            <span class="quota-value">${q.fiveHourPercent}%</span>
+          </div>
+        </div>
+        
+        <!-- Weekly Limit Column -->
+        <div class="quota-limit-col">
+          <div class="quota-limit-label-container">
+            <span class="quota-limit-name">Weekly limit</span>
+            <span class="quota-limit-reset">${weeklyResetStr}</span>
+          </div>
+          <div class="quota-limit-bar-container">
+            <div class="progress-container">
+              <div class="progress-bar" style="width: ${q.weeklyPercent}%;"></div>
+            </div>
+            <span class="quota-value">${q.weeklyPercent}%</span>
+          </div>
+        </div>
       </div>
     `;
     quotasList.appendChild(itemEl);
@@ -272,15 +340,15 @@ async function checkForUpdates() {
         updateBtn.style.display = "flex";
         updateBtn.title = `New version ${latestTag} is available. Click to update.`;
         
-        updateBtn.addEventListener("click", () => {
-          const confirmUpdate = confirm(`A new version (${latestTag}) of Antigravity Quota is available. Do you want to download and install it now?`);
+        updateBtn.addEventListener("click", async () => {
+          const confirmUpdate = await showCustomConfirm(`A new version (${latestTag}) of Antigravity Quota Quickcheck is available. Do you want to download and install it now?`);
           if (confirmUpdate) {
             updateBtn.classList.add("downloading");
             updateBtn.title = "Downloading update...";
-            invoke("execute_update", { url: downloadUrl }).catch((err) => {
+            invoke("execute_update", { url: downloadUrl }).catch(async (err) => {
               updateBtn.classList.remove("downloading");
               updateBtn.title = `Update failed: ${err}`;
-              alert(`Update failed: ${err}`);
+              await showCustomAlert(`Update failed: ${err}`);
             });
           }
         });
@@ -330,15 +398,46 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error("Failed to check debug mode:", err);
   }
 
+  // Function to scroll active/monitored model to center
+  function scrollToActiveModel() {
+    setTimeout(() => {
+      const activeEl = document.querySelector(".quota-item.monitored") as HTMLElement;
+      const parent = document.getElementById("quotas-list");
+      if (!activeEl || !parent) return;
+
+      const parentRect = parent.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+      
+      const relativeTop = activeRect.top - parentRect.top;
+      const targetScrollTop = parent.scrollTop + relativeTop - (parentRect.height / 2) + (activeRect.height / 2);
+      
+      parent.scrollTo({
+        top: targetScrollTop,
+        behavior: "smooth"
+      });
+    }, 100);
+  }
+
   // Listen for backend updates pushed to frontend
   listen<FullStatus | null>("status-updated", (event) => {
     updateUI(event.payload);
+  });
+
+  // Listen for window-shown custom event from Tauri
+  listen("window-shown", () => {
+    scrollToActiveModel();
+  });
+
+  // Listen for standard web window focus event
+  window.addEventListener("focus", () => {
+    scrollToActiveModel();
   });
 
   // Get initial status
   try {
     const initialStatus = await invoke<FullStatus | null>("get_quota_status");
     updateUI(initialStatus);
+    scrollToActiveModel();
   } catch (err) {
     updateUI(null);
   }

@@ -2,6 +2,12 @@ export interface QuotaData {
     model: string;
     percent: number;
     refreshTime: string;
+    fiveHourPercent: number;
+    fiveHourReset: string;
+    fiveHourDisabled?: boolean;
+    weeklyPercent: number;
+    weeklyReset: string;
+    weeklyDisabled?: boolean;
 }
 
 export interface CreditInfo {
@@ -16,4 +22,5 @@ export interface FullStatus {
     recentlyUsedModel: string | null;
     planTier?: string | null;
 }
+
 

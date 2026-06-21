@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Antigravity Quota Dashboard</title>
+    <title>Antigravity Quota Quickcheck</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,7 +24,7 @@
             <line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="2"/>
             <path d="M7 15H11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          <span class="app-title">Antigravity Quota</span>
+          <span class="app-title">Antigravity Quota Quickcheck</span>
         </div>
         <div class="header-right">
           <button class="update-btn" id="update-btn" title="New version available" style="display: none;">
@@ -107,6 +107,17 @@
           <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new" class="footer-link" id="report-issue-link">Report Issue</a>
         </div>
       </footer>
+    </div>
+
+    <!-- Custom Modal Dialog -->
+    <div id="custom-dialog-overlay" class="dialog-overlay" style="display: none;">
+      <div class="dialog-box">
+        <p class="dialog-message">The model has already been exhausted!</p>
+        <div class="dialog-buttons">
+          <button id="dialog-cancel-btn" class="dialog-btn dialog-btn--cancel" style="display: none;">Cancel</button>
+          <button id="dialog-ok-btn" class="dialog-btn">OK</button>
+        </div>
+      </div>
     </div>
   </body>
 </html>

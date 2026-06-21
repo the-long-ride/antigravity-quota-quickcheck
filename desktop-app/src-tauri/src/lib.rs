@@ -43,7 +43,20 @@ pub struct QuotaData {
     pub percent: u32,
     #[serde(rename = "refreshTime")]
     pub refresh_time: String,
+    #[serde(rename = "fiveHourPercent")]
+    pub five_hour_percent: u32,
+    #[serde(rename = "fiveHourReset")]
+    pub five_hour_reset: String,
+    #[serde(rename = "fiveHourDisabled")]
+    pub five_hour_disabled: bool,
+    #[serde(rename = "weeklyPercent")]
+    pub weekly_percent: u32,
+    #[serde(rename = "weeklyReset")]
+    pub weekly_reset: String,
+    #[serde(rename = "weeklyDisabled")]
+    pub weekly_disabled: bool,
 }
+
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CreditInfo {
@@ -273,11 +286,11 @@ fn scan_port(pid: u32) -> Option<u16> {
     caps.get(1)?.as_str().parse::<u16>().ok()
 }
 
-async fn query_server(port: u16, token: &str) -> Result<serde_json::Value, String> {
+async fn query_server(port: u16, token: &str, path: &str) -> Result<serde_json::Value, String> {
     let client = reqwest::Client::new();
     let url = format!(
-        "http://127.0.0.1:{}/exa.language_server_pb.LanguageServerService/GetUserStatus",
-        port
+        "http://127.0.0.1:{}{}",
+        port, path
     );
     let payload = serde_json::json!({
         "metadata": { "ideName": "antigravity" }
@@ -314,8 +327,8 @@ async fn query_server(port: u16, token: &str) -> Result<serde_json::Value, Strin
                     .map_err(|e| e.to_string())?;
 
                 let https_url = format!(
-                    "https://127.0.0.1:{}/exa.language_server_pb.LanguageServerService/GetUserStatus",
-                    port
+                    "https://127.0.0.1:{}{}",
+                    port, path
                 );
                 let https_res = https_client
                     .post(&https_url)
@@ -356,34 +369,39 @@ async fn fetch_full_status_internal() -> Result<FullStatus, String> {
     };
 
     let mut raw_data = None;
+    let mut raw_quota_summary = None;
 
     if let (Some(_p), Some(t), Some(po)) = (pid, &token, port) {
-        if let Ok(data) = query_server(po, t).await {
+        if let Ok(data) = query_server(po, t, "/exa.language_server_pb.LanguageServerService/GetUserStatus").await {
             raw_data = Some(data);
+            raw_quota_summary = query_server(po, t, "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").await.ok();
         }
     }
 
     if raw_data.is_none() {
         if let Some((p, t)) = scan_processes() {
             if let Some(po) = scan_port(p) {
-                if let Ok(data) = query_server(po, &t).await {
+                if let Ok(data) = query_server(po, &t, "/exa.language_server_pb.LanguageServerService/GetUserStatus").await {
                     pid = Some(p);
                     token = Some(t);
                     port = Some(po);
 
-                    let mut state = get_state().lock().unwrap();
-                    state.cached_pid = pid;
-                    state.cached_token = token.clone();
-                    state.cached_port = port;
+                    {
+                        let mut state = get_state().lock().unwrap();
+                        state.cached_pid = pid;
+                        state.cached_token = token.clone();
+                        state.cached_port = port;
+                    }
 
                     raw_data = Some(data);
+                    raw_quota_summary = query_server(po, token.as_deref().unwrap(), "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").await.ok();
                 }
             }
         }
     }
 
     let raw = raw_data.ok_or_else(|| "Could not fetch data from server".to_string())?;
-    let mut new_status = parse_full_status(raw)?;
+    let mut new_status = parse_full_status(raw, raw_quota_summary.unwrap_or(serde_json::Value::Null))?;
 
     // Sync recently_used_model with the user's chosen monitored model
     let chosen_model = {
@@ -400,7 +418,7 @@ async fn fetch_full_status_internal() -> Result<FullStatus, String> {
     Ok(new_status)
 }
 
-fn parse_full_status(raw: serde_json::Value) -> Result<FullStatus, String> {
+fn parse_full_status(raw: serde_json::Value, quota_summary: serde_json::Value) -> Result<FullStatus, String> {
     let mut credits = None;
     let credit_info_raw = raw.pointer("/userStatus/userInfo/creditInfo");
     let alt_credit_info_raw = raw.pointer("/userStatus/userTier/availableCredits/0");
@@ -434,6 +452,50 @@ fn parse_full_status(raw: serde_json::Value) -> Result<FullStatus, String> {
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
+    // Helper structure to keep track of parsed groups/buckets
+    #[derive(Debug, Clone)]
+    struct ParsedBucket {
+        window: String,
+        remaining_fraction: f64,
+        reset_time: String,
+        disabled: bool,
+    }
+
+    #[derive(Debug, Clone)]
+    struct ParsedGroup {
+        display_name: String,
+        description: String,
+        buckets: Vec<ParsedBucket>,
+    }
+
+    let mut groups = Vec::new();
+    if let Some(groups_arr) = quota_summary.pointer("/response/groups").and_then(|v| v.as_array()) {
+        for g in groups_arr {
+            let group_name = g.get("displayName").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let desc = g.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let mut buckets = Vec::new();
+            if let Some(buckets_arr) = g.get("buckets").and_then(|v| v.as_array()) {
+                for b in buckets_arr {
+                    let win = b.get("window").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let remaining = b.get("remainingFraction").and_then(|v| v.as_f64()).unwrap_or(1.0);
+                    let reset = b.get("resetTime").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let disabled = b.get("disabled").and_then(|v| v.as_bool()).unwrap_or(false);
+                    buckets.push(ParsedBucket {
+                        window: win,
+                        remaining_fraction: remaining,
+                        reset_time: reset,
+                        disabled,
+                    });
+                }
+            }
+            groups.push(ParsedGroup {
+                display_name: group_name,
+                description: desc,
+                buckets,
+            });
+        }
+    }
+
     let mut quotas = Vec::new();
     if let Some(configs) = raw
         .pointer("/userStatus/cascadeModelConfigData/clientModelConfigs")
@@ -445,22 +507,73 @@ fn parse_full_status(raw: serde_json::Value) -> Result<FullStatus, String> {
                 None => continue,
             };
 
-            let mut percent = 0;
-            let mut refresh_time = "Exhausted".to_string();
+            let mut five_hour_percent = 100;
+            let mut five_hour_reset = "".to_string();
+            let mut five_hour_disabled = false;
+            let mut weekly_percent = 100;
+            let mut weekly_reset = "".to_string();
+            let mut weekly_disabled = false;
 
-            if let Some(quota_info) = config.get("quotaInfo") {
-                if let Some(fraction) = quota_info.get("remainingFraction").and_then(|v| v.as_f64()) {
-                    percent = (fraction.clamp(0.0, 1.0) * 100.0).round() as u32;
+            let model_lower = label.to_lowercase();
+            let matched_group = groups.iter().find(|g| {
+                if model_lower.contains("gemini") {
+                    g.display_name.to_lowercase().contains("gemini")
+                } else if model_lower.contains("claude") || model_lower.contains("gpt") {
+                    g.display_name.to_lowercase().contains("claude") || g.display_name.to_lowercase().contains("gpt")
+                } else {
+                    g.description.to_lowercase().contains(&model_lower) || g.display_name.to_lowercase().contains(&model_lower)
                 }
-                if let Some(reset_time) = quota_info.get("resetTime").and_then(|v| v.as_str()) {
-                    refresh_time = reset_time.to_string();
+            });
+
+            if let Some(g) = matched_group {
+                for b in &g.buckets {
+                    let pct = (b.remaining_fraction.clamp(0.0, 1.0) * 100.0).round() as u32;
+                    if b.window == "5h" {
+                        five_hour_percent = pct;
+                        five_hour_reset = b.reset_time.clone();
+                        five_hour_disabled = b.disabled;
+                    } else if b.window == "weekly" {
+                        weekly_percent = pct;
+                        weekly_reset = b.reset_time.clone();
+                        weekly_disabled = b.disabled;
+                    }
+                }
+            } else {
+                // Fallback
+                if let Some(quota_info) = config.get("quotaInfo") {
+                    if let Some(fraction) = quota_info.get("remainingFraction").and_then(|v| v.as_f64()) {
+                        let pct = (fraction.clamp(0.0, 1.0) * 100.0).round() as u32;
+                        five_hour_percent = pct;
+                        weekly_percent = pct;
+                    }
+                    if let Some(reset_time) = quota_info.get("resetTime").and_then(|v| v.as_str()) {
+                        five_hour_reset = reset_time.to_string();
+                        weekly_reset = reset_time.to_string();
+                    }
                 }
             }
+
+            if weekly_percent == 0 {
+                five_hour_percent = 0;
+            }
+
+            let percent = five_hour_percent;
+            let refresh_time = if five_hour_reset.is_empty() {
+                "Exhausted".to_string()
+            } else {
+                five_hour_reset.clone()
+            };
 
             quotas.push(QuotaData {
                 model: label,
                 percent,
                 refresh_time,
+                five_hour_percent,
+                five_hour_reset,
+                five_hour_disabled,
+                weekly_percent,
+                weekly_reset,
+                weekly_disabled,
             });
         }
     }
@@ -485,29 +598,40 @@ fn parse_full_status(raw: serde_json::Value) -> Result<FullStatus, String> {
     })
 }
 
-fn format_tooltip(status: &FullStatus) -> String {
-    let credits_str = match &status.credits {
-        Some(c) => format!("Credits: ${:.2}", c.balance),
-        None => "Credits: —".to_string(),
-    };
+fn build_bar(percent: u32, total: usize) -> String {
+    let filled = ((percent as f32 / 100.0) * total as f32).round() as usize;
+    let filled_str = "█".repeat(filled);
+    let empty_str = "░".repeat(total - filled);
+    format!("{}{}", filled_str, empty_str)
+}
 
+fn format_tooltip(status: &FullStatus) -> String {
     let active_model = {
         let state = get_state().lock().unwrap();
         state.monitored_model.clone()
     };
 
-    let active_quota = if let Some(model_name) = active_model {
-        status.quotas.iter().find(|q| q.model == model_name)
+    let active_quota = if let Some(model_name) = &active_model {
+        status.quotas.iter().find(|q| q.model == *model_name)
     } else {
         status.quotas.first()
     };
 
-    let quota_str = match active_quota {
-        Some(q) => format!("\n{}: {}%", q.model, q.percent),
-        None => "".to_string(),
-    };
-
-    format!("{}{}", credits_str, quota_str)
+    match active_quota {
+        Some(q) => {
+            let five_hour_bar = build_bar(q.five_hour_percent, 4);
+            let weekly_bar = build_bar(q.weekly_percent, 4);
+            format!(
+                "{}\n5h: {} {}%\nwk: {} {}%",
+                q.model,
+                five_hour_bar,
+                q.five_hour_percent,
+                weekly_bar,
+                q.weekly_percent
+            )
+        }
+        None => "Antigravity Quota Quickcheck".to_string(),
+    }
 }
 
 async fn poll_and_update_tray(app_handle: &tauri::AppHandle) -> Result<(), String> {
@@ -529,7 +653,7 @@ async fn poll_and_update_tray(app_handle: &tauri::AppHandle) -> Result<(), Strin
             let _ = app_handle.emit("status-updated", serde_json::Value::Null);
             if let Some(tray) = app_handle.tray_by_id("main") {
                 let _ = tray.set_tooltip(Some(
-                    "Antigravity Quota: offline\n⚠️ Language server not reachable.".to_string(),
+                    "Antigravity Quota Quickcheck: offline\n⚠️ Language server not reachable.".to_string(),
                 ));
             }
             Err("Offline".to_string())
@@ -564,7 +688,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let tray_icon = tauri::image::Image::from_bytes(icon_bytes).expect("Failed to load tray icon");
 
     let _tray = TrayIconBuilder::with_id("main")
-        .tooltip("Antigravity Quota")
+        .tooltip("Antigravity Quota Quickcheck")
         .icon(tray_icon)
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -573,6 +697,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
                     position_window(&window);
                     let _ = window.show();
                     let _ = window.set_focus();
+                    let _ = window.emit("window-shown", true);
                 }
             }
             "quit" => {
@@ -592,6 +717,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
                             position_window(&window);
                             let _ = window.show();
                             let _ = window.set_focus();
+                            let _ = window.emit("window-shown", true);
                         }
                     }
                 }
@@ -605,6 +731,14 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                position_window(&window);
+                let _ = window.show();
+                let _ = window.set_focus();
+                let _ = window.emit("window-shown", true);
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_quota_status,

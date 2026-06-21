@@ -1,9 +1,9 @@
 import * as http from 'http';
 import * as https from 'https';
 
-export async function queryServer(port: number, token: string): Promise<any> {
+export async function queryServer(port: number, token: string, path: string = '/exa.language_server_pb.LanguageServerService/GetUserStatus'): Promise<any> {
     try {
-        return await queryServerInternal(port, token, false);
+        return await queryServerInternal(port, token, path, false);
     } catch (e: any) {
         const msg = e.message || '';
         // If we see signs that the server expects HTTPS, retry with it.
@@ -15,7 +15,7 @@ export async function queryServer(port: number, token: string): Promise<any> {
             msg.includes('Client sent an HTTP request to an HTTPS server')
         ) {
             try {
-                return await queryServerInternal(port, token, true);
+                return await queryServerInternal(port, token, path, true);
             } catch (innerError) {
                 // If HTTPS also fails, throw the original HTTP error as it might be more descriptive
                 throw e;
@@ -25,7 +25,7 @@ export async function queryServer(port: number, token: string): Promise<any> {
     }
 }
 
-function queryServerInternal(port: number, token: string, useHttps: boolean): Promise<any> {
+function queryServerInternal(port: number, token: string, path: string, useHttps: boolean): Promise<any> {
     const client = useHttps ? (https as any) : (http as any);
     
     return new Promise((resolve, reject) => {
@@ -36,7 +36,7 @@ function queryServerInternal(port: number, token: string, useHttps: boolean): Pr
         const options: any = {
             hostname: '127.0.0.1',
             port,
-            path: '/exa.language_server_pb.LanguageServerService/GetUserStatus',
+            path,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

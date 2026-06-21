@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-06-22
+
+### Added
+- **Multi-Limit Quota Display**: Added support for rolling 5-Hour Limit and Weekly Limit concurrently.
+- **Limit Interdependence Logic**: If a model's weekly limit is depleted (0%), its 5-hour limit is also automatically aligned and forced to 0%.
+- **Absolute Reset Timestamps**: Display localized, absolute reset times (e.g. `5:41 AM` or `June 28, 7:41 PM`) instead of relative countdowns.
+- **Double-Column Desktop Layout**: Re-laid out limits side-by-side as two vertical columns in a single row below the model name for a compact dashboard.
+- **Single-Instance Enforcement**: Integrated `tauri-plugin-single-instance` to prevent multiple app instances from executing simultaneously. Starting a second instance automatically positions and focuses the active window.
+- **Click-to-Center Scrolling**: When the tray icon is clicked or window is focused, the monitored model is automatically smooth-scrolled into the vertical center of the dashboard.
+
+### Changed
+- **Renamed App**: Renamed the desktop app to `Antigravity Quota Quickcheck` across window titles, executables, updates, and templates.
+- **Clean Labeling**: Removed trailing dots from limit labels (`5 hrs limit` instead of `5 hrs limit.`).
+- **Compact Tray Tooltip**: Simplified the system tray tooltip to show only the tracked model name and its 5h and wk progress bars and percentages to prevent Windows OS-level 64-character truncation.
+
 ## [1.2.1] - 2026-06-21
 
 ### Added
