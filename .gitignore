@@ -1,3 +1,9 @@
 node_modules/
 out/
 *.vsix
+desktop-app/src-tauri/target/
+desktop-app/dist/
+.env
+*.local
+.DS_Store
+Thumbs.db
