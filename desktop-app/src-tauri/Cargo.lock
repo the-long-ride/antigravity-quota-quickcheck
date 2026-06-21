@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "antigravity-quota-tray"
-version = "1.2.2"
+version = "1.2.3"
 dependencies = [
  "raw-window-handle",
  "regex",

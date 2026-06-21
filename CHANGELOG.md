@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-06-22
+
+### Added
+- **VS Code Extension Tip**: Added a note/link in the VS Code status bar tooltip and quick pick menu prompting users to check out the standalone Desktop App for easy quota tracking when using `Antigravity 2.0`.
+- **Installer Icon**: Set the custom desktop app icon for the generated NSIS installer and uninstaller on Windows.
+
+### Changed
+- **Robust Installer Path Detection**: Re-implemented the installer's previous path detection to look up registry keys in both HKCU and HKLM uninstall and publisher keys, stripping double quotes if they exist.
+- **Backend Updater Args**: Pass the `/UPDATE` flag to the installer from the backend Rust process when launching the update on Windows.
+
 ## [1.2.2] - 2026-06-22
 
 ### Added

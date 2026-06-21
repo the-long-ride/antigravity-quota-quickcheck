@@ -93,6 +93,8 @@ export function buildTooltip(
 
     md.appendMarkdown("</table>\n\n");
     md.appendMarkdown("---\n");
+    md.appendMarkdown("💡 **Tip:** Track your quota easily anytime on your desktop using the standalone **[Desktop App](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest)** when using `Antigravity 2.0`.\n\n");
+    md.appendMarkdown("---\n");
   }
 
 

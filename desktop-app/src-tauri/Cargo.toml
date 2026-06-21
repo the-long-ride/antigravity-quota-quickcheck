@@ -1,6 +1,6 @@
 [package]
 name = "antigravity-quota-tray"
-version = "1.2.2"
+version = "1.2.3"
 description = "Antigravity Quota Tray Application"
 authors = ["the-long-ride"]
 edition = "2021"

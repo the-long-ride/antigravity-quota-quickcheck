@@ -61,17 +61,32 @@ export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
     });
 
 
-    quickPick.items = [creditItem, separator, ...modelItems];
+    const desktopSeparator: vscode.QuickPickItem = {
+      label: "",
+      kind: vscode.QuickPickItemKind.Separator,
+    };
+
+    const desktopAppItem: ModelQuickPickItem = {
+      label: "$(desktop-preserve)  Get Desktop App",
+      description: "Track your quota anytime on desktop (especially when using Antigravity 2.0)",
+      alwaysShow: true,
+    };
+
+    quickPick.items = [creditItem, separator, ...modelItems, desktopSeparator, desktopAppItem];
 
     quickPick.onDidAccept(async () => {
       const selected = quickPick.selectedItems[0] as ModelQuickPickItem;
-      if (selected && selected.modelName) {
-        const config = vscode.workspace.getConfiguration("antigravity-quota");
-        await config.update(
-          "monitoredModel",
-          selected.modelName,
-          vscode.ConfigurationTarget.Global,
-        );
+      if (selected) {
+        if (selected.label.includes("Get Desktop App")) {
+          vscode.env.openExternal(vscode.Uri.parse("https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest"));
+        } else if (selected.modelName) {
+          const config = vscode.workspace.getConfiguration("antigravity-quota");
+          await config.update(
+            "monitoredModel",
+            selected.modelName,
+            vscode.ConfigurationTarget.Global,
+          );
+        }
       }
       quickPick.hide();
     });
