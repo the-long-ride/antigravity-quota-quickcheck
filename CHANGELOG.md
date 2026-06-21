@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-06-21
+
+### Added
+- **Tauri Standalone Desktop Tray App**: Documented and packaged a standalone system tray app to monitor model quotas and credits outside of VS Code.
+  - Lightweight system tray utility with hover tooltip info.
+  - Premium translucent overlay dashboard togglable on click.
+  - Progression bars, custom refresh rate, theme toggle (dark/light), and direct updater from GitHub Releases.
+
 ## [1.2.0] - 2026-06-20
 
 ### Added
