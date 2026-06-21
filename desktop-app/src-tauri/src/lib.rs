@@ -116,6 +116,64 @@ fn is_debug() -> bool {
     cfg!(debug_assertions)
 }
 
+#[tauri::command]
+async fn execute_update(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let res = client
+        .get(&url)
+        .header("User-Agent", "antigravity-quota-quickcheck")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Err(format!("Failed to download update: status {}", res.status()));
+    }
+
+    let bytes = res.bytes().await.map_err(|e| e.to_string())?;
+
+    let file_name = if cfg!(target_os = "windows") {
+        "update_setup.exe"
+    } else {
+        "update.deb"
+    };
+
+    let temp_dir = std::env::temp_dir();
+    let temp_file_path = temp_dir.join(file_name);
+
+    std::fs::write(&temp_file_path, bytes).map_err(|e| e.to_string())?;
+
+    // Execute the installer
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new(&temp_file_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+
+        // Exit the app so the installer can overwrite it
+        app_handle.exit(0);
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Try opening with xdg-open so the system package manager handles it
+        std::process::Command::new("xdg-open")
+            .arg(&temp_file_path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+
+        app_handle.exit(0);
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        let _ = app_handle;
+        return Err("Unsupported OS for auto update".to_string());
+    }
+
+    Ok(())
+}
+
 #[cfg(target_os = "windows")]
 fn scan_processes() -> Option<(u32, String)> {
     let output = Command::new("powershell")
@@ -550,7 +608,8 @@ pub fn run() {
             force_refresh,
             set_monitored_model,
             set_poll_interval,
-            is_debug
+            is_debug,
+            execute_update
         ])
         .setup(|app| {
             let _ = setup_tray(app.handle());
