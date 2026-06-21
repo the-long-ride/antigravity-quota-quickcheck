@@ -560,9 +560,12 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &quit])?;
 
+    let icon_bytes = include_bytes!("../icons/32x32.png");
+    let tray_icon = tauri::image::Image::from_bytes(icon_bytes).expect("Failed to load tray icon");
+
     let _tray = TrayIconBuilder::with_id("main")
         .tooltip("Antigravity Quota")
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tray_icon)
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => {
@@ -629,6 +632,13 @@ pub fn run() {
 
             // Hide window on blur (focus loss) so it acts like a true popup panel
             let main_window = app.get_webview_window("main").unwrap();
+            
+            // Set window icon explicitly to bypass cache / packaging issues
+            let win_icon_bytes = include_bytes!("../icons/128x128.png");
+            if let Ok(win_icon) = tauri::image::Image::from_bytes(win_icon_bytes) {
+                let _ = main_window.set_icon(win_icon);
+            }
+
             let w_clone = main_window.clone();
             main_window.on_window_event(move |event| {
                 if let tauri::WindowEvent::Focused(false) = event {
