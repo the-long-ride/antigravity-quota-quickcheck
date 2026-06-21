@@ -44,8 +44,8 @@ The project now includes a **Tauri-powered standalone desktop tray application**
 - **Manual**: Download the `.vsix` from releases, then `Extensions: Install from VSIX...` in VS Code.
 
 #### Standalone Desktop App
-- **Windows**: Download the installer (`*setup.exe`) or the portable executable (`*portable.exe`) from the latest GitHub release.
-- **Linux**: Download the `.deb` package from the latest GitHub release.
+- **Windows**: Download the [installer (*setup.exe)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) or the [portable executable (*portable.exe)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) from the [latest GitHub release](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest).
+- **Linux**: Download the [.deb package](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) from the [latest GitHub release](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest).
 
 ---
 
