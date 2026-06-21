@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getVersion } from "@tauri-apps/api/app";
 
 // Interfaces matching Rust structs
 interface QuotaData {
@@ -28,6 +28,7 @@ const statusText = document.getElementById("status-text")!;
 const planTierValue = document.getElementById("plan-tier-value")!;
 const creditAmount = document.getElementById("credit-amount")!;
 const quotasList = document.getElementById("quotas-list")!;
+const updateBtn = document.getElementById("update-btn")!;
 const refreshBtn = document.getElementById("refresh-btn")!;
 const pollIntervalInput = document.getElementById("poll-interval") as HTMLInputElement;
 const themeToggleBtn = document.getElementById("theme-toggle")!;
@@ -235,6 +236,74 @@ document.getElementById("report-issue-link")!.addEventListener("click", (e) => {
   openUrl("https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new");
 });
 
+async function checkForUpdates() {
+  try {
+    const currentVersion = await getVersion();
+    const res = await fetch("https://api.github.com/repos/the-long-ride/antigravity-quota-quickcheck/releases/latest");
+    if (!res.ok) {
+      console.warn("GitHub API request failed, status:", res.status);
+      return;
+    }
+    const releaseData = await res.json();
+    const latestTag = releaseData.tag_name;
+    if (!latestTag) return;
+
+    const currentClean = currentVersion.replace(/^v/, "");
+    const latestClean = latestTag.replace(/^v/, "");
+
+    if (isNewerVersion(currentClean, latestClean)) {
+      const assets = releaseData.assets || [];
+      let downloadUrl = "";
+
+      const isWindows = navigator.userAgent.toLowerCase().includes("windows");
+      const isLinux = navigator.userAgent.toLowerCase().includes("linux");
+
+      if (isWindows) {
+        // Look for NSIS installer *.exe
+        const asset = assets.find((a: any) => a.name.endsWith(".exe") && !a.name.includes("portable"));
+        if (asset) downloadUrl = asset.browser_download_url;
+      } else if (isLinux) {
+        // Look for *.deb package
+        const asset = assets.find((a: any) => a.name.endsWith(".deb"));
+        if (asset) downloadUrl = asset.browser_download_url;
+      }
+
+      if (downloadUrl) {
+        updateBtn.style.display = "flex";
+        updateBtn.title = `New version ${latestTag} is available. Click to update.`;
+        
+        updateBtn.addEventListener("click", () => {
+          const confirmUpdate = confirm(`A new version (${latestTag}) of Antigravity Quota is available. Do you want to download and install it now?`);
+          if (confirmUpdate) {
+            updateBtn.classList.add("downloading");
+            updateBtn.title = "Downloading update...";
+            invoke("execute_update", { url: downloadUrl }).catch((err) => {
+              updateBtn.classList.remove("downloading");
+              updateBtn.title = `Update failed: ${err}`;
+              alert(`Update failed: ${err}`);
+            });
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Check for updates failed:", err);
+  }
+}
+
+function isNewerVersion(current: string, latest: string): boolean {
+  const cParts = current.split(".").map(Number);
+  const lParts = latest.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const cPart = cParts[i] || 0;
+    const lPart = lParts[i] || 0;
+    if (lPart > cPart) return true;
+    if (lPart < cPart) return false;
+  }
+  return false;
+}
+
+
 // Setup listeners when DOM loaded
 window.addEventListener("DOMContentLoaded", async () => {
   // If not debug build, disable context menu and development/search keyboard shortcuts
@@ -273,4 +342,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch (err) {
     updateUI(null);
   }
+
+  // Check for updates
+  checkForUpdates();
 });
