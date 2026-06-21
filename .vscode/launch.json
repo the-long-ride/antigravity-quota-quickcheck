@@ -2,7 +2,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension",
+      "name": "Run Tauri Desktop App",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/desktop-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "tauri", "dev"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Run VS Code Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [

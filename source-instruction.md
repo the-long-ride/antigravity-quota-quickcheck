@@ -40,9 +40,9 @@ Because the main Antigravity extension doesn't expose a public API, `src/telemet
 6. **Parsing**: Normalizes the response, sorting quotas in descending order (highest % first).
 
 ### 3. UI Display & Interactivity
-- **Status Bar**: Displays the **recently used model's** percentage and remaining AI credits. Features a smart tracker that calculates the "hardest working" model by recording quota drops into a sliding window (`usageHistory`), which defaults to 5 minutes but is **user-customizable** via the tooltip.
-- **Hover Tooltip**: Renders a rich HTML-based table (to avoid VS Code's default Markdown table borders) with battery SVG icons for visual indicators. The recently used model is highlighted with a pulse icon (**$(pulse)**) and bold text. Includes interactive action links to change the polling interval or the tracking period.
-- **QuickPick**: Clicking the main status bar item opens a searchable dropdown with progress bars (`█` and `░`).
+- **Status Bar**: Displays the monitored model's remaining quota percentage and remaining AI credits. If no model is explicitly set in configuration, it defaults to the model with the highest remaining quota.
+- **Hover Tooltip**: Renders a rich HTML-based table (to avoid VS Code's default Markdown table borders) with battery SVG icons for visual indicators. The monitored model is highlighted with a pulse icon (**$(pulse)**) and bold text. Includes interactive action links to change the polling interval or to toggle status bar detail visibility (minimize/display monitor).
+- **QuickPick**: Clicking the main status bar item opens a searchable dropdown with progress bars (`█` and `░`). Clicking a model in the QuickPick sets it as the monitored model.
 - **Settings**: Clicking the interval setting or minimize button in the tooltip dynamically adjusts background behavior and UI visibility.
 
 ## 🤖 AI Guidelines

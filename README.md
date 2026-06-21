@@ -20,11 +20,11 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 | ![Hover Preview](assets/demo-pics/hover-on-status-bar-item.png) | ![Click Preview](assets/demo-pics/click-on-status-bar-item.png) |
 
 ### 🚀 Key Features
-- **Hardest Working Model Tracking**: Automatically detects your most heavily used model (with a **pulse icon $(pulse)$** for highlighting) by monitoring usage volume (quota drops) within a sliding window (**default 5 minutes, user-adjustable**), ensuring the status bar always shows what's relevant.
-- **Rich Hover Tooltip**: Hover for a detailed, stroke-less breakdown of your plan tier, remaining AI credits, and model reset times. The active model is highlighted with a pulse icon **$(pulse)$**.
-- **Clean Workspace**: Use the "Minimize monitor" feature in the tooltip to hide the quota text and keep only the icon visible in the status bar.
-- **Customizable Intervals**: Adjust the quota refresh rate on-the-fly directly from the tooltip.
-- **One-Click QuickPick**: Click the status bar item for instant access to all model stats in a clean, searchable list.
+- **Active Model Monitoring**: Displays the remaining quota of your selected Gemini model directly in the status bar. If no model is explicitly set, it automatically defaults to the model with the highest remaining quota.
+- **Rich Hover Tooltip**: Hover for a detailed, borderless HTML breakdown of your subscription tier, remaining AI credits, and model reset times. The active model is highlighted with bold text and a pulse icon **$(pulse)$**.
+- **Clean Workspace**: Minimize status bar clutter by clicking "Minimize monitor" in the tooltip to replace the full quota text with a simple `$(credit-card) Quotas` display. Restore it anytime with "Display monitor".
+- **Customizable Intervals**: Adjust the quota refresh rate on-the-fly directly from the tooltip settings prompt.
+- **One-Click QuickPick**: Click the status bar item to instantly force a refresh and view all models in a clean, searchable QuickPick dropdown. Select any model from the list to update the monitored model.
 
 ### 📦 Installation
 - **Marketplace**: Install via [Open VSX Registry](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
