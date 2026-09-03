@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { fetchFullStatus, formatAbsoluteTime } from "../telemetry";
+import { fetchFullStatus, formatAbsoluteTime, resolveQuotaModelName } from "../telemetry";
 import { buildBar, getQuotaIconUri, formatNumber } from "./helpers";
 
 export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
@@ -36,7 +36,7 @@ export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
       .getConfiguration("antigravity-quota")
       .get<string>("monitoredModel");
 
-    let activeModel = monitoredModel;
+    let activeModel = resolveQuotaModelName(monitoredModel);
     if (quotaData.length > 0 && !quotaData.some((q) => q.model === activeModel)) {
       activeModel = quotaData[0].model;
     }
