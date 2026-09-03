@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
 use std::process::Command;
 
 const MAX_CREDENTIAL_BYTES: u64 = 1024 * 1024;
