@@ -1,4 +1,5 @@
 pub mod agy_cli;
+pub mod credentials;
 
 use crate::FullStatus;
 use std::fmt;
