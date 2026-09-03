@@ -95,7 +95,9 @@ pub fn parse_retrieve_user_quota(value: &Value) -> Option<QuotaData> {
             continue;
         }
 
-        let remaining = bucket.get("remainingFraction").and_then(Value::as_f64)?;
+        let Some(remaining) = bucket.get("remainingFraction").and_then(Value::as_f64) else {
+            continue;
+        };
         if !remaining.is_finite() {
             continue;
         }
