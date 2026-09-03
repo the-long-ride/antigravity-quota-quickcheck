@@ -4,7 +4,7 @@ import { queryServer } from "./client";
 import { parseFullStatus } from "./parser";
 
 export * from "./types";
-export { formatAbsoluteTime } from "./parser";
+export { formatAbsoluteTime, resolveQuotaModelName } from "./parser";
 
 let cachedPid: number | null = null;
 let cachedToken: string | null = null;
