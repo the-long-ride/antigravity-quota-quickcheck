@@ -1,11 +1,6 @@
 name: Manual Build
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/manual-build.yml'
   workflow_dispatch:
     inputs:
       build_extension:
@@ -27,7 +22,7 @@ on:
 jobs:
   build-extension:
     name: Build VS Code Extension
-    if: ${{ github.event_name == 'push' || inputs.build_extension }}
+    if: ${{ inputs.build_extension }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -57,7 +52,7 @@ jobs:
 
   build-windows:
     name: Build Desktop (Windows)
-    if: ${{ github.event_name == 'push' || inputs.build_windows }}
+    if: ${{ inputs.build_windows }}
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -95,7 +90,7 @@ jobs:
 
   build-linux:
     name: Build Desktop (Linux)
-    if: ${{ github.event_name == 'push' || inputs.build_linux }}
+    if: ${{ inputs.build_linux }}
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
