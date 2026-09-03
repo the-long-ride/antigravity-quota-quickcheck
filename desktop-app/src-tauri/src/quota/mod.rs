@@ -1,6 +1,7 @@
 pub mod agy_cli;
 pub mod cloud_code;
 pub mod credentials;
+pub mod language_server;
 
 use crate::FullStatus;
 use std::fmt;
