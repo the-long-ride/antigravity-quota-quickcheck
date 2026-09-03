@@ -30,6 +30,16 @@ export function parseFullStatus(raw: any, quotaSummary?: any): FullStatus {
   return { credits, quotas, recentlyUsedModel, planTier };
 }
 
+export function resolveQuotaModelName(modelName: string | null | undefined): string | null {
+  if (!modelName) return null;
+  const lower = modelName.toLowerCase();
+  if (lower.includes("gemini")) return "Gemini";
+  if (lower.includes("claude") || lower.includes("gpt") || lower.includes("openai")) {
+    return "Claude & OpenAI";
+  }
+  return modelName;
+}
+
 export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] {
   const results: QuotaData[] = [];
   const groups: any[] = quotaSummary?.response?.groups || [];
@@ -46,8 +56,8 @@ export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] 
       if (lowerLabel.includes("gemini")) {
         return groupLowerName.includes("gemini");
       }
-      if (lowerLabel.includes("claude") || lowerLabel.includes("gpt")) {
-        return groupLowerName.includes("claude") || groupLowerName.includes("gpt");
+      if (lowerLabel.includes("claude") || lowerLabel.includes("gpt") || lowerLabel.includes("openai")) {
+        return groupLowerName.includes("claude") || groupLowerName.includes("gpt") || groupLowerName.includes("openai");
       }
       return g.description.toLowerCase().includes(lowerLabel) || groupLowerName.includes(lowerLabel);
     });
@@ -108,8 +118,17 @@ export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] 
     });
   }
 
-  // Sort descending (highest percent first)
-  return results.sort((a, b) => b.percent - a.percent);
+  const grouped: QuotaData[] = [];
+  const gemini = results.find((quota) => quota.model.toLowerCase().includes("gemini"));
+  if (gemini) grouped.push({ ...gemini, model: "Gemini" });
+
+  const claudeOpenAi = results.find((quota) => {
+    const model = quota.model.toLowerCase();
+    return model.includes("claude") || model.includes("gpt") || model.includes("openai");
+  });
+  if (claudeOpenAi) grouped.push({ ...claudeOpenAi, model: "Claude & OpenAI" });
+
+  return grouped;
 }
 
 

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { fetchFullStatus } from "../telemetry";
+import { fetchFullStatus, resolveQuotaModelName } from "../telemetry";
 import { buildTooltip } from "./tooltip";
 import { formatNumber } from "./helpers";
 
@@ -16,7 +16,8 @@ export async function refreshStatusBar(
       .getConfiguration("antigravity-quota")
       .get<string>("monitoredModel");
 
-    let activeQuota = status.quotas.find((q) => q.model === monitoredModel);
+    const resolvedMonitoredModel = resolveQuotaModelName(monitoredModel);
+    let activeQuota = status.quotas.find((q) => q.model === resolvedMonitoredModel);
     if (!activeQuota && status.quotas.length > 0) {
       activeQuota = status.quotas[0];
     }
