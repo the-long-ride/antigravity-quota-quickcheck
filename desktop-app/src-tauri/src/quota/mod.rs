@@ -1,3 +1,5 @@
+pub mod agy_cli;
+
 use crate::FullStatus;
 use std::fmt;
 use std::future::Future;
