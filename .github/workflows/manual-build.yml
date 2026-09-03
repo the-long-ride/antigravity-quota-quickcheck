@@ -1,0 +1,132 @@
+name: Manual Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_extension:
+        description: 'Build VS Code extension (.vsix)'
+        required: false
+        type: boolean
+        default: true
+      build_windows:
+        description: 'Build Windows desktop binaries'
+        required: false
+        type: boolean
+        default: true
+      build_linux:
+        description: 'Build Linux desktop binaries'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build-extension:
+    name: Build VS Code Extension
+    if: ${{ inputs.build_extension }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile extension
+        run: npm run compile
+
+      - name: Package extension
+        run: npx @vscode/vsce package
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-vsix
+          path: '*.vsix'
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Desktop (Windows)
+    if: ${{ inputs.build_windows }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'desktop-app/package-lock.json'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './desktop-app/src-tauri -> target'
+
+      - name: Install Node dependencies
+        working-directory: desktop-app
+        run: npm ci
+
+      - name: Build desktop app
+        working-directory: desktop-app
+        run: npm run build:release
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: desktop-app/release/*
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Desktop (Linux)
+    if: ${{ inputs.build_linux }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'desktop-app/package-lock.json'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './desktop-app/src-tauri -> target'
+
+      - name: Install Node dependencies
+        working-directory: desktop-app
+        run: npm ci
+
+      - name: Build desktop app
+        working-directory: desktop-app
+        run: npm run build:release
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux
+          path: desktop-app/release/*
+          if-no-files-found: error
