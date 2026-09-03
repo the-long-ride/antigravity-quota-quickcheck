@@ -519,8 +519,10 @@ fn parse_full_status(raw: serde_json::Value, quota_summary: serde_json::Value) -
             let matched_group = groups.iter().find(|g| {
                 if model_lower.contains("gemini") {
                     g.display_name.to_lowercase().contains("gemini")
-                } else if model_lower.contains("claude") || model_lower.contains("gpt") {
-                    g.display_name.to_lowercase().contains("claude") || g.display_name.to_lowercase().contains("gpt")
+                } else if model_lower.contains("claude") || model_lower.contains("gpt") || model_lower.contains("openai") {
+                    g.display_name.to_lowercase().contains("claude")
+                        || g.display_name.to_lowercase().contains("gpt")
+                        || g.display_name.to_lowercase().contains("openai")
                 } else {
                     g.description.to_lowercase().contains(&model_lower) || g.display_name.to_lowercase().contains(&model_lower)
                 }
@@ -579,15 +581,27 @@ fn parse_full_status(raw: serde_json::Value, quota_summary: serde_json::Value) -
         }
     }
 
-    // Sort descending by percentage, with alphabetical model name as stable tie-breaker
-    quotas.sort_by(|a, b| {
-        let cmp = b.percent.cmp(&a.percent);
-        if cmp == std::cmp::Ordering::Equal {
-            a.model.cmp(&b.model)
-        } else {
-            cmp
-        }
-    });
+    let mut grouped_quotas = Vec::new();
+
+    if let Some(quota) = quotas
+        .iter()
+        .find(|quota| quota.model.to_lowercase().contains("gemini"))
+    {
+        let mut grouped = quota.clone();
+        grouped.model = "Gemini".to_string();
+        grouped_quotas.push(grouped);
+    }
+
+    if let Some(quota) = quotas.iter().find(|quota| {
+        let model = quota.model.to_lowercase();
+        model.contains("claude") || model.contains("gpt") || model.contains("openai")
+    }) {
+        let mut grouped = quota.clone();
+        grouped.model = "Claude & OpenAI".to_string();
+        grouped_quotas.push(grouped);
+    }
+
+    quotas = grouped_quotas;
 
     let recently_used_model = quotas.first().map(|q| q.model.clone());
 
