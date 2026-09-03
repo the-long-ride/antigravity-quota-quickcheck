@@ -28,7 +28,6 @@ interface FullStatus {
   recentlyUsedModel: string | null;
 }
 
-
 let disabledClickCount = 0;
 
 // Global UI Elements
@@ -109,7 +108,6 @@ function getSavedTheme(): "dark" | "light" {
   return (localStorage.getItem(THEME_KEY) as "dark" | "light") ?? "dark";
 }
 
-// Apply saved theme immediately on load
 applyTheme(getSavedTheme());
 
 themeToggleBtn.addEventListener("click", () => {
@@ -118,7 +116,6 @@ themeToggleBtn.addEventListener("click", () => {
   applyTheme(next);
   localStorage.setItem(THEME_KEY, next);
 });
-// ───────────────────────────────────────────────────────────────────────────
 
 function formatAbsoluteTime(isoDate: string): string {
   if (!isoDate || isoDate === "Exhausted" || isoDate === "Ready") return isoDate || "—";
@@ -139,44 +136,38 @@ function formatAbsoluteTime(isoDate: string): string {
 
   if (isCurrentDay) {
     return `Resets at: ${timeStr}`;
-  } else {
-    const MONTHS = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
-    const month = MONTHS[futureDate.getMonth()];
-    const day = futureDate.getDate();
-    return `Resets at: ${month} ${day}, ${timeStr}`;
   }
+
+  const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const month = MONTHS[futureDate.getMonth()];
+  const day = futureDate.getDate();
+  return `Resets at: ${month} ${day}, ${timeStr}`;
 }
 
 function updateUI(status: FullStatus | null) {
   if (!status) {
-    // Offline / Error State
     statusIndicator.className = "status-indicator offline";
     statusText.textContent = "Offline";
     planTierValue.textContent = "—";
     creditAmount.textContent = "—";
     quotasList.innerHTML = `
       <div class="error-state">
-        <strong>Language server not reachable</strong>
+        <strong>No quota source available</strong>
         <p style="margin-top: 4px; font-size: 10.5px; color: var(--text-secondary);">
-          Ensure the Antigravity extension or server is running and try again.
+          Sign in with agy, or start Antigravity IDE to use the language-server fallback.
         </p>
       </div>
     `;
     return;
   }
 
-  // Online State
   statusIndicator.className = "status-indicator";
   statusText.textContent = "Online";
-
-  // Plan Tier
   planTierValue.textContent = status.planTier || "Gemini AI";
 
-
-  // Credits Balance
   if (status.credits) {
     const formatter = new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -187,7 +178,6 @@ function updateUI(status: FullStatus | null) {
     creditAmount.textContent = "—";
   }
 
-  // Quotas List
   if (status.quotas.length === 0) {
     quotasList.innerHTML = `
       <div class="loading-state">
@@ -200,11 +190,14 @@ function updateUI(status: FullStatus | null) {
   quotasList.innerHTML = "";
   status.quotas.forEach((q) => {
     const isMonitored = q.model === status.recentlyUsedModel;
-    const isDisabled = q.weeklyPercent === 0;
+    const availablePercents = [
+      q.fiveHourDisabled ? null : q.fiveHourPercent,
+      q.weeklyDisabled ? null : q.weeklyPercent,
+    ].filter((value): value is number => value !== null);
+    const isDisabled = availablePercents.length > 0 && availablePercents.every((value) => value === 0);
     const itemEl = document.createElement("div");
     itemEl.className = `quota-item ${isMonitored ? "monitored" : ""} ${isDisabled ? "disabled-model" : ""}`;
-    
-    // Add Click listener to monitor this model in system tray
+
     itemEl.addEventListener("click", async () => {
       if (isDisabled) {
         disabledClickCount++;
@@ -214,20 +207,26 @@ function updateUI(status: FullStatus | null) {
         return;
       }
       await invoke("set_monitored_model", { model: q.model });
-      // Instantly trigger a refresh so tray text updates
       triggerRefresh();
     });
 
-    const fiveHourResetStr = q.fiveHourDisabled ? "Disabled" : (q.fiveHourReset ? formatAbsoluteTime(q.fiveHourReset) : "Ready");
-    const weeklyResetStr = q.weeklyDisabled ? "Disabled" : (q.weeklyReset ? formatAbsoluteTime(q.weeklyReset) : "Ready");
+    const fiveHourResetStr = q.fiveHourDisabled
+      ? "Unavailable"
+      : (q.fiveHourReset ? formatAbsoluteTime(q.fiveHourReset) : "Ready");
+    const weeklyResetStr = q.weeklyDisabled
+      ? "Unavailable"
+      : (q.weeklyReset ? formatAbsoluteTime(q.weeklyReset) : "Ready");
+    const fiveHourValue = q.fiveHourDisabled ? "—" : `${q.fiveHourPercent}%`;
+    const weeklyValue = q.weeklyDisabled ? "—" : `${q.weeklyPercent}%`;
+    const fiveHourWidth = q.fiveHourDisabled ? 0 : q.fiveHourPercent;
+    const weeklyWidth = q.weeklyDisabled ? 0 : q.weeklyPercent;
 
     itemEl.innerHTML = `
       <div class="quota-item-header">
         <span class="quota-model-name">${q.model}</span>
       </div>
-      
+
       <div class="quota-limits-container">
-        <!-- Five Hour Limit Column -->
         <div class="quota-limit-col">
           <div class="quota-limit-label-container">
             <span class="quota-limit-name">5 hrs limit</span>
@@ -235,13 +234,12 @@ function updateUI(status: FullStatus | null) {
           </div>
           <div class="quota-limit-bar-container">
             <div class="progress-container">
-              <div class="progress-bar" style="width: ${q.fiveHourPercent}%;"></div>
+              <div class="progress-bar" style="width: ${fiveHourWidth}%;"></div>
             </div>
-            <span class="quota-value">${q.fiveHourPercent}%</span>
+            <span class="quota-value">${fiveHourValue}</span>
           </div>
         </div>
-        
-        <!-- Weekly Limit Column -->
+
         <div class="quota-limit-col">
           <div class="quota-limit-label-container">
             <span class="quota-limit-name">Weekly limit</span>
@@ -249,9 +247,9 @@ function updateUI(status: FullStatus | null) {
           </div>
           <div class="quota-limit-bar-container">
             <div class="progress-container">
-              <div class="progress-bar" style="width: ${q.weeklyPercent}%;"></div>
+              <div class="progress-bar" style="width: ${weeklyWidth}%;"></div>
             </div>
-            <span class="quota-value">${q.weeklyPercent}%</span>
+            <span class="quota-value">${weeklyValue}</span>
           </div>
         </div>
       </div>
@@ -269,14 +267,12 @@ async function triggerRefresh() {
     console.error("Refresh error:", err);
     updateUI(null);
   } finally {
-    // Keep spin active slightly to feel reactive
     setTimeout(() => {
       refreshBtn.classList.remove("spinning");
     }, 400);
   }
 }
 
-// Listen to interval change
 pollIntervalInput.addEventListener("change", async () => {
   let val = parseInt(pollIntervalInput.value);
   if (isNaN(val) || val < 5) {
@@ -286,11 +282,8 @@ pollIntervalInput.addEventListener("change", async () => {
   await invoke("set_poll_interval", { seconds: BigInt(val) });
 });
 
-// Manual refresh button click
 refreshBtn.addEventListener("click", triggerRefresh);
 
-
-// Footer links — open in system browser via Tauri opener
 document.getElementById("author-link")!.addEventListener("click", (e) => {
   e.preventDefault();
   openUrl("https://github.com/the-long-ride");
@@ -322,16 +315,13 @@ async function checkForUpdates() {
     if (isNewerVersion(currentClean, latestClean)) {
       const assets = releaseData.assets || [];
       let downloadUrl = "";
-
       const isWindows = navigator.userAgent.toLowerCase().includes("windows");
       const isLinux = navigator.userAgent.toLowerCase().includes("linux");
 
       if (isWindows) {
-        // Look for NSIS installer *.exe
         const asset = assets.find((a: any) => a.name.endsWith(".exe") && !a.name.includes("portable"));
         if (asset) downloadUrl = asset.browser_download_url;
       } else if (isLinux) {
-        // Look for *.deb package
         const asset = assets.find((a: any) => a.name.endsWith(".deb"));
         if (asset) downloadUrl = asset.browser_download_url;
       }
@@ -339,7 +329,7 @@ async function checkForUpdates() {
       if (downloadUrl) {
         updateBtn.style.display = "flex";
         updateBtn.title = `New version ${latestTag} is available. Click to update.`;
-        
+
         updateBtn.addEventListener("click", async () => {
           const confirmUpdate = await showCustomConfirm(`A new version (${latestTag}) of Antigravity Quota Quickcheck is available. Do you want to download and install it now?`);
           if (confirmUpdate) {
@@ -371,24 +361,18 @@ function isNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
-
-// Setup listeners when DOM loaded
 window.addEventListener("DOMContentLoaded", async () => {
-  // If not debug build, disable context menu and development/search keyboard shortcuts
   try {
     const isDebug = await invoke<boolean>("is_debug");
     if (!isDebug) {
       document.addEventListener("contextmenu", (e) => e.preventDefault());
       document.addEventListener("keydown", (e) => {
-        // Ctrl+F
         if (e.ctrlKey && e.key.toLowerCase() === "f") {
           e.preventDefault();
         }
-        // F12 or Ctrl+Shift+I (devtools)
         if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "i")) {
           e.preventDefault();
         }
-        // Ctrl+R or F5 (refresh page)
         if ((e.ctrlKey && e.key.toLowerCase() === "r") || e.key === "F5") {
           e.preventDefault();
         }
@@ -398,7 +382,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error("Failed to check debug mode:", err);
   }
 
-  // Function to scroll active/monitored model to center
   function scrollToActiveModel() {
     setTimeout(() => {
       const activeEl = document.querySelector(".quota-item.monitored") as HTMLElement;
@@ -407,10 +390,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 
       const parentRect = parent.getBoundingClientRect();
       const activeRect = activeEl.getBoundingClientRect();
-      
       const relativeTop = activeRect.top - parentRect.top;
       const targetScrollTop = parent.scrollTop + relativeTop - (parentRect.height / 2) + (activeRect.height / 2);
-      
+
       parent.scrollTo({
         top: targetScrollTop,
         behavior: "smooth"
@@ -418,22 +400,18 @@ window.addEventListener("DOMContentLoaded", async () => {
     }, 100);
   }
 
-  // Listen for backend updates pushed to frontend
   listen<FullStatus | null>("status-updated", (event) => {
     updateUI(event.payload);
   });
 
-  // Listen for window-shown custom event from Tauri
   listen("window-shown", () => {
     scrollToActiveModel();
   });
 
-  // Listen for standard web window focus event
   window.addEventListener("focus", () => {
     scrollToActiveModel();
   });
 
-  // Get initial status
   try {
     const initialStatus = await invoke<FullStatus | null>("get_quota_status");
     updateUI(initialStatus);
@@ -442,6 +420,5 @@ window.addEventListener("DOMContentLoaded", async () => {
     updateUI(null);
   }
 
-  // Check for updates
   checkForUpdates();
 });
