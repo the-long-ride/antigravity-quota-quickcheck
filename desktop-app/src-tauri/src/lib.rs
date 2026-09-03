@@ -1,10 +1,11 @@
-use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
 };
+
+mod quota;
 
 // ── Windows: remove DWM 1px border ────────────────────────────────────
 #[cfg(target_os = "windows")]
@@ -56,7 +57,6 @@ pub struct QuotaData {
     #[serde(rename = "weeklyDisabled")]
     pub weekly_disabled: bool,
 }
-
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct CreditInfo {
@@ -188,429 +188,56 @@ async fn execute_update(app_handle: tauri::AppHandle, url: String) -> Result<(),
     Ok(())
 }
 
-#[cfg(target_os = "windows")]
-fn scan_processes() -> Option<(u32, String)> {
-    let output = Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-Command",
-            "Get-CimInstance Win32_Process | Where-Object {$_.Name -like '*language_server*'} | Select-Object ProcessId,CommandLine | ConvertTo-Json"
-        ])
-        .output()
-        .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let trimmed = stdout.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    let json_val: serde_json::Value = serde_json::from_str(trimmed).ok()?;
-    let processes = if let Some(arr) = json_val.as_array() {
-        arr.clone()
-    } else {
-        vec![json_val]
-    };
-
-    let token_re = regex::Regex::new(r"--csrf[_-]?token[=\s]+([a-f0-9-]+)").ok()?;
-    for proc in processes {
-        let cmd_line = proc.get("CommandLine").and_then(|v| v.as_str()).unwrap_or("");
-        if let Some(caps) = token_re.captures(cmd_line) {
-            let token = caps.get(1)?.as_str().to_string();
-            let pid = proc.get("ProcessId").and_then(|v| v.as_u64()).map(|v| v as u32)?;
-            return Some((pid, token));
-        }
-    }
-    None
-}
-
-#[cfg(not(target_os = "windows"))]
-fn scan_processes() -> Option<(u32, String)> {
-    let output = Command::new("sh")
-        .args(["-c", "ps -axo pid,args | grep -i language_server | grep -v grep"])
-        .output()
-        .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let lines = stdout.trim().lines();
-    let token_re = regex::Regex::new(r"--csrf[_-]?token[=\s]+([a-f0-9-]+)").ok()?;
-    for line in lines {
-        if let Some(caps) = token_re.captures(line) {
-            let token = caps.get(1)?.as_str().to_string();
-            let pid_str = line.trim().split_whitespace().next()?;
-            let pid = pid_str.parse::<u32>().ok()?;
-            return Some((pid, token));
-        }
-    }
-    None
-}
-
-#[cfg(target_os = "windows")]
-fn scan_port(pid: u32) -> Option<u16> {
-    let cmd = format!(
-        "Get-NetTCPConnection -OwningProcess {} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort",
-        pid
-    );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-Command", &cmd])
-        .output()
-        .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let port_str = stdout.trim().lines().next()?.trim();
-    port_str.parse::<u16>().ok()
-}
-
-#[cfg(target_os = "macos")]
-fn scan_port(pid: u32) -> Option<u16> {
-    let cmd = format!(
-        "lsof -iTCP -sTCP:LISTEN -a -p {} -Fn 2>/dev/null | grep '^n' | sed 's/n\\*://'",
-        pid
-    );
-    let output = Command::new("sh")
-        .args(["-c", &cmd])
-        .output()
-        .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let port_str = stdout.trim().lines().next()?.trim();
-    port_str.parse::<u16>().ok()
-}
-
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-fn scan_port(pid: u32) -> Option<u16> {
-    let cmd = format!("ss -tlnpH 2>/dev/null | grep -F \"pid={},\"", pid);
-    let output = Command::new("sh")
-        .args(["-c", &cmd])
-        .output()
-        .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let line = stdout.trim().lines().next()?;
-    let port_re = regex::Regex::new(r"(?:^|:)(\d+)(?:\s|$)").ok()?;
-    let caps = port_re.captures(line)?;
-    caps.get(1)?.as_str().parse::<u16>().ok()
-}
-
-async fn query_server(port: u16, token: &str, path: &str) -> Result<serde_json::Value, String> {
-    let client = reqwest::Client::new();
-    let url = format!(
-        "http://127.0.0.1:{}{}",
-        port, path
-    );
-    let payload = serde_json::json!({
-        "metadata": { "ideName": "antigravity" }
-    });
-
-    let res = client
-        .post(&url)
-        .header("Content-Type", "application/json")
-        .header("Connect-Protocol-Version", "1")
-        .header("X-Codeium-Csrf-Token", token)
-        .json(&payload)
-        .send()
-        .await;
-
-    match res {
-        Ok(r) => {
-            if r.status().is_success() {
-                r.json::<serde_json::Value>()
-                    .await
-                    .map_err(|e| e.to_string())
-            } else {
-                Err(format!("HTTP status: {}", r.status()))
-            }
-        }
-        Err(e) => {
-            let err_msg = e.to_string().to_lowercase();
-            if err_msg.contains("http instead of https")
-                || err_msg.contains("wrong version number")
-                || err_msg.contains("client sent an http request to an https server")
-            {
-                let https_client = reqwest::Client::builder()
-                    .danger_accept_invalid_certs(true)
-                    .build()
-                    .map_err(|e| e.to_string())?;
-
-                let https_url = format!(
-                    "https://127.0.0.1:{}{}",
-                    port, path
-                );
-                let https_res = https_client
-                    .post(&https_url)
-                    .header("Content-Type", "application/json")
-                    .header("Connect-Protocol-Version", "1")
-                    .header("X-Codeium-Csrf-Token", token)
-                    .json(&payload)
-                    .send()
-                    .await;
-
-                match https_res {
-                    Ok(r) => {
-                        if r.status().is_success() {
-                            r.json::<serde_json::Value>()
-                                .await
-                                .map_err(|inner| inner.to_string())
-                        } else {
-                            Err(format!("HTTPS status: {}", r.status()))
-                        }
-                    }
-                    Err(inner) => Err(inner.to_string()),
-                }
-            } else {
-                Err(e.to_string())
-            }
-        }
-    }
-}
-
 async fn fetch_full_status_internal() -> Result<FullStatus, String> {
-    let (mut pid, mut token, mut port) = {
+    let (cached_connection, monitored_model) = {
         let state = get_state().lock().unwrap();
-        (
+        let cached_connection = match (
             state.cached_pid,
             state.cached_token.clone(),
             state.cached_port,
-        )
+        ) {
+            (Some(pid), Some(token), Some(port)) => {
+                Some(quota::language_server::Connection { pid, token, port })
+            }
+            _ => None,
+        };
+        (cached_connection, state.monitored_model.clone())
     };
 
-    let mut raw_data = None;
-    let mut raw_quota_summary = None;
-
-    if let (Some(_p), Some(t), Some(po)) = (pid, &token, port) {
-        if let Ok(data) = query_server(po, t, "/exa.language_server_pb.LanguageServerService/GetUserStatus").await {
-            raw_data = Some(data);
-            raw_quota_summary = query_server(po, t, "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").await.ok();
+    let language_server = async move {
+        let (status, connection) = quota::language_server::fetch(cached_connection).await?;
+        {
+            let mut state = get_state().lock().unwrap();
+            state.cached_pid = Some(connection.pid);
+            state.cached_token = Some(connection.token);
+            state.cached_port = Some(connection.port);
         }
-    }
-
-    if raw_data.is_none() {
-        if let Some((p, t)) = scan_processes() {
-            if let Some(po) = scan_port(p) {
-                if let Ok(data) = query_server(po, &t, "/exa.language_server_pb.LanguageServerService/GetUserStatus").await {
-                    pid = Some(p);
-                    token = Some(t);
-                    port = Some(po);
-
-                    {
-                        let mut state = get_state().lock().unwrap();
-                        state.cached_pid = pid;
-                        state.cached_token = token.clone();
-                        state.cached_port = port;
-                    }
-
-                    raw_data = Some(data);
-                    raw_quota_summary = query_server(po, token.as_deref().unwrap(), "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").await.ok();
-                }
-            }
-        }
-    }
-
-    let raw = raw_data.ok_or_else(|| "Could not fetch data from server".to_string())?;
-    let mut new_status = parse_full_status(raw, raw_quota_summary.unwrap_or(serde_json::Value::Null))?;
-
-    // Sync recently_used_model with the user's chosen monitored model
-    let chosen_model = {
-        let state = get_state().lock().unwrap();
-        state.monitored_model.clone()
+        Ok(status)
     };
 
-    if let Some(ref model) = chosen_model {
-        if new_status.quotas.iter().any(|q| &q.model == model) {
-            new_status.recently_used_model = Some(model.clone());
+    let providers: Vec<(quota::ProviderKind, quota::ProviderFuture<'_>)> = vec![
+        (quota::ProviderKind::AgyCli, Box::pin(quota::agy_cli::fetch())),
+        (
+            quota::ProviderKind::CloudCode,
+            Box::pin(quota::cloud_code::fetch()),
+        ),
+        (
+            quota::ProviderKind::LanguageServer,
+            Box::pin(language_server),
+        ),
+    ];
+
+    let mut status = quota::run_provider_chain(providers)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    if let Some(model) = monitored_model {
+        if status.quotas.iter().any(|quota| quota.model == model) {
+            status.recently_used_model = Some(model);
         }
     }
 
-    Ok(new_status)
-}
-
-fn parse_full_status(raw: serde_json::Value, quota_summary: serde_json::Value) -> Result<FullStatus, String> {
-    let mut credits = None;
-    let credit_info_raw = raw.pointer("/userStatus/userInfo/creditInfo");
-    let alt_credit_info_raw = raw.pointer("/userStatus/userTier/availableCredits/0");
-    let src = credit_info_raw.or(alt_credit_info_raw);
-
-    if let Some(s) = src {
-        let balance = s
-            .get("currentBalance")
-            .or(s.get("balance"))
-            .or(s.get("creditAmount"))
-            .and_then(|v| {
-                v.as_f64()
-                    .or_else(|| v.as_str().and_then(|st| st.parse::<f64>().ok()))
-                    .or_else(|| v.as_i64().map(|i| i as f64))
-            })
-            .unwrap_or(0.0);
-        let credit_type = s
-            .get("creditType")
-            .or(s.get("type"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("UNKNOWN")
-            .to_string();
-        credits = Some(CreditInfo {
-            balance,
-            credit_type,
-        });
-    }
-
-    let plan_tier = raw
-        .pointer("/userStatus/userTier/name")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    // Helper structure to keep track of parsed groups/buckets
-    #[derive(Debug, Clone)]
-    struct ParsedBucket {
-        window: String,
-        remaining_fraction: f64,
-        reset_time: String,
-        disabled: bool,
-    }
-
-    #[derive(Debug, Clone)]
-    struct ParsedGroup {
-        display_name: String,
-        description: String,
-        buckets: Vec<ParsedBucket>,
-    }
-
-    let mut groups = Vec::new();
-    if let Some(groups_arr) = quota_summary.pointer("/response/groups").and_then(|v| v.as_array()) {
-        for g in groups_arr {
-            let group_name = g.get("displayName").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let desc = g.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let mut buckets = Vec::new();
-            if let Some(buckets_arr) = g.get("buckets").and_then(|v| v.as_array()) {
-                for b in buckets_arr {
-                    let win = b.get("window").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let remaining = b.get("remainingFraction").and_then(|v| v.as_f64()).unwrap_or(1.0);
-                    let reset = b.get("resetTime").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                    let disabled = b.get("disabled").and_then(|v| v.as_bool()).unwrap_or(false);
-                    buckets.push(ParsedBucket {
-                        window: win,
-                        remaining_fraction: remaining,
-                        reset_time: reset,
-                        disabled,
-                    });
-                }
-            }
-            groups.push(ParsedGroup {
-                display_name: group_name,
-                description: desc,
-                buckets,
-            });
-        }
-    }
-
-    let mut quotas = Vec::new();
-    if let Some(configs) = raw
-        .pointer("/userStatus/cascadeModelConfigData/clientModelConfigs")
-        .and_then(|v| v.as_array())
-    {
-        for config in configs {
-            let label = match config.get("label").and_then(|v| v.as_str()) {
-                Some(l) => l.to_string(),
-                None => continue,
-            };
-
-            let mut five_hour_percent = 100;
-            let mut five_hour_reset = "".to_string();
-            let mut five_hour_disabled = false;
-            let mut weekly_percent = 100;
-            let mut weekly_reset = "".to_string();
-            let mut weekly_disabled = false;
-
-            let model_lower = label.to_lowercase();
-            let matched_group = groups.iter().find(|g| {
-                if model_lower.contains("gemini") {
-                    g.display_name.to_lowercase().contains("gemini")
-                } else if model_lower.contains("claude") || model_lower.contains("gpt") || model_lower.contains("openai") {
-                    g.display_name.to_lowercase().contains("claude")
-                        || g.display_name.to_lowercase().contains("gpt")
-                        || g.display_name.to_lowercase().contains("openai")
-                } else {
-                    g.description.to_lowercase().contains(&model_lower) || g.display_name.to_lowercase().contains(&model_lower)
-                }
-            });
-
-            if let Some(g) = matched_group {
-                for b in &g.buckets {
-                    let pct = (b.remaining_fraction.clamp(0.0, 1.0) * 100.0).round() as u32;
-                    if b.window == "5h" {
-                        five_hour_percent = pct;
-                        five_hour_reset = b.reset_time.clone();
-                        five_hour_disabled = b.disabled;
-                    } else if b.window == "weekly" {
-                        weekly_percent = pct;
-                        weekly_reset = b.reset_time.clone();
-                        weekly_disabled = b.disabled;
-                    }
-                }
-            } else {
-                // Fallback
-                if let Some(quota_info) = config.get("quotaInfo") {
-                    if let Some(fraction) = quota_info.get("remainingFraction").and_then(|v| v.as_f64()) {
-                        let pct = (fraction.clamp(0.0, 1.0) * 100.0).round() as u32;
-                        five_hour_percent = pct;
-                        weekly_percent = pct;
-                    }
-                    if let Some(reset_time) = quota_info.get("resetTime").and_then(|v| v.as_str()) {
-                        five_hour_reset = reset_time.to_string();
-                        weekly_reset = reset_time.to_string();
-                    }
-                }
-            }
-
-            if weekly_percent == 0 {
-                five_hour_percent = 0;
-            }
-
-            let percent = five_hour_percent;
-            let refresh_time = if five_hour_reset.is_empty() {
-                "Exhausted".to_string()
-            } else {
-                five_hour_reset.clone()
-            };
-
-            quotas.push(QuotaData {
-                model: label,
-                percent,
-                refresh_time,
-                five_hour_percent,
-                five_hour_reset,
-                five_hour_disabled,
-                weekly_percent,
-                weekly_reset,
-                weekly_disabled,
-            });
-        }
-    }
-
-    let mut grouped_quotas = Vec::new();
-
-    if let Some(quota) = quotas
-        .iter()
-        .find(|quota| quota.model.to_lowercase().contains("gemini"))
-    {
-        let mut grouped = quota.clone();
-        grouped.model = "Gemini".to_string();
-        grouped_quotas.push(grouped);
-    }
-
-    if let Some(quota) = quotas.iter().find(|quota| {
-        let model = quota.model.to_lowercase();
-        model.contains("claude") || model.contains("gpt") || model.contains("openai")
-    }) {
-        let mut grouped = quota.clone();
-        grouped.model = "Claude & OpenAI".to_string();
-        grouped_quotas.push(grouped);
-    }
-
-    quotas = grouped_quotas;
-
-    let recently_used_model = quotas.first().map(|q| q.model.clone());
-
-    Ok(FullStatus {
-        credits,
-        quotas,
-        plan_tier,
-        recently_used_model,
-    })
+    Ok(status)
 }
 
 fn build_bar(percent: u32, total: usize) -> String {
@@ -668,7 +295,8 @@ async fn poll_and_update_tray(app_handle: &tauri::AppHandle) -> Result<(), Strin
             let _ = app_handle.emit("status-updated", serde_json::Value::Null);
             if let Some(tray) = app_handle.tray_by_id("main") {
                 let _ = tray.set_tooltip(Some(
-                    "Antigravity Quota Quickcheck: offline\n⚠️ Language server not reachable.".to_string(),
+                    "Antigravity Quota Quickcheck: offline\n⚠️ No quota provider is reachable."
+                        .to_string(),
                 ));
             }
             Err("Offline".to_string())
@@ -721,7 +349,12 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), tauri::Error> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { button, button_state, .. } = event {
+            if let TrayIconEvent::Click {
+                button,
+                button_state,
+                ..
+            } = event
+            {
                 if button == MouseButton::Left && button_state == MouseButtonState::Up {
                     let app = tray.app_handle();
                     if let Some(window) = app.get_webview_window("main") {
@@ -781,7 +414,7 @@ pub fn run() {
 
             // Hide window on blur (focus loss) so it acts like a true popup panel
             let main_window = app.get_webview_window("main").unwrap();
-            
+
             // Set window icon explicitly to bypass cache / packaging issues
             let win_icon_bytes = include_bytes!("../icons/128x128.png");
             if let Ok(win_icon) = tauri::image::Image::from_bytes(win_icon_bytes) {
