@@ -79,6 +79,30 @@ fn retrieve_user_quota_uses_worst_requests_fraction_and_earliest_reset() {
 }
 
 #[test]
+fn retrieve_user_quota_skips_malformed_request_bucket_and_keeps_valid_data() {
+    let value = json!({
+        "buckets": [
+            {
+                "modelId": "gemini-broken",
+                "tokenType": "REQUESTS",
+                "remainingFraction": "unknown",
+                "resetTime": "2026-09-04T00:00:00Z"
+            },
+            {
+                "modelId": "gemini-3-pro",
+                "tokenType": "REQUESTS",
+                "remainingFraction": 0.63,
+                "resetTime": "2026-09-05T03:00:00Z"
+            }
+        ]
+    });
+
+    let quota = parse_retrieve_user_quota(&value).expect("valid REQUESTS bucket should survive malformed peers");
+    assert_eq!(quota.five_hour_percent, 63);
+    assert_eq!(quota.five_hour_reset, "2026-09-05T03:00:00Z");
+}
+
+#[test]
 fn retrieve_user_quota_honors_explicit_weekly_window_without_copying_it() {
     let value = json!({
         "buckets": [
