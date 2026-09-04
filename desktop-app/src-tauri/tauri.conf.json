@@ -43,6 +43,7 @@
     "windows": {
       "nsis": {
         "template": "installer.nsi",
+        "installerHooks": "installer-hooks.nsh",
         "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico"
       }
