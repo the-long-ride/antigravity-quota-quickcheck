@@ -25,3 +25,11 @@ pub fn hide_std_window(command: &mut std::process::Command) {
         let _ = command;
     }
 }
+
+pub fn hide_tokio_command(command: &mut tokio::process::Command) {
+    hide_window(command);
+}
+
+pub fn hide_std_command(command: &mut std::process::Command) {
+    hide_std_window(command);
+}
