@@ -8,6 +8,7 @@ use regex::Regex;
 use serde_json::Value;
 use tokio::process::Command;
 
+use super::process::hide_tokio_command;
 use super::{ProviderError, ProviderErrorKind};
 
 const PROVIDER: &str = "agy credentials";
@@ -188,6 +189,7 @@ async fn read_native_keyring() -> Result<String, ProviderError> {
 
 async fn run_keyring_command(program: &str, args: &[&str]) -> Result<String, ProviderError> {
     let mut command = Command::new(program);
+    hide_tokio_command(&mut command);
     command
         .args(args)
         .stdin(Stdio::null())
