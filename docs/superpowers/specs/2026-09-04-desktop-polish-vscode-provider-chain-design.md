@@ -38,7 +38,7 @@ The UI calls `fetchFullStatus()` and should remain unaware of which provider pro
 
 ### Chosen behavior
 
-Reduce the desktop window height from `650` to a compact fixed value sized for:
+Reduce the desktop window height from `650px` to **380px**. This fixed size is intended to contain:
 
 - header
 - top tier/credit cards
@@ -47,8 +47,6 @@ Reduce the desktop window height from `650` to a compact fixed value sized for:
 - footer
 - small breathing room
 
-Target height: **approximately 380px**. The implementation may adjust by a few pixels after checking actual rendered content, but it should not retain a large flexible blank region.
-
 The window remains:
 
 - `680px` wide
@@ -56,9 +54,9 @@ The window remains:
 - always-on-top
 - tray-style popup
 
-If tray positioning logic assumes `650px`, update it to use the new height or query the actual outer size so the popup still anchors correctly above/beside the tray icon.
+If tray positioning logic assumes `650px`, update it to use the new `380px` height or query the actual outer size so the popup still anchors correctly above/beside the tray icon.
 
-The quota list may keep vertical scrolling as a safety fallback, but with the normal two-card layout the scrollbar should not be needed.
+The quota list may keep vertical scrolling as a safety fallback for unexpected future content, but with the normal two-card layout no vertical scrollbar should appear.
 
 ## Reset date formatting
 
@@ -350,8 +348,8 @@ Existing parser/UI tests must continue passing.
 
 ## Acceptance criteria
 
-1. Desktop panel no longer has the large blank region shown in the reported screenshot.
-2. The normal two-card desktop layout fits without vertical scrolling at the chosen fixed window height.
+1. Desktop panel is fixed at `680x380` and no longer has the large blank region shown in the reported screenshot.
+2. The normal two-card desktop layout fits without vertical scrolling at `380px` height.
 3. Reset times render `Sep`, `Oct`, etc. instead of full month names.
 4. Background quota refresh on Windows does not flash an `agy`, PowerShell, or terminal window.
 5. VS Code extension uses `agy -> Cloud Code -> language server` in that exact order.
