@@ -1,7 +1,6 @@
 import { CreditInfo, FullStatus, QuotaData } from "./types";
 
 export function parseFullStatus(raw: any, quotaSummary?: any): FullStatus {
-  // --- Credits ---
   let credits: CreditInfo | null = null;
   const creditInfoRaw = raw?.userStatus?.userInfo?.creditInfo;
   const altCreditInfoRaw =
@@ -17,14 +16,8 @@ export function parseFullStatus(raw: any, quotaSummary?: any): FullStatus {
   }
 
   const configs = raw?.userStatus?.cascadeModelConfigData?.clientModelConfigs || [];
-
-  // --- Active model (Handled by client-side usage tracker in index.ts) ---
   let recentlyUsedModel: string | null = null;
-
-  // --- Quotas ---
   const quotas = parseQuotaData(configs, quotaSummary);
-
-  // -- User's plan tier name
   const planTier = raw?.userStatus?.userTier?.name;
 
   return { credits, quotas, recentlyUsedModel, planTier };
@@ -50,7 +43,6 @@ export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] 
     const label = config.label;
     const lowerLabel = label.toLowerCase();
 
-    // Match group
     const matchedGroup = groups.find(g => {
       const groupLowerName = g.displayName.toLowerCase();
       if (lowerLabel.includes("gemini")) {
@@ -83,17 +75,14 @@ export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] 
           weeklyDisabled = !!b.disabled;
         }
       }
-    } else {
-      // Fallback
-      if (config.quotaInfo) {
-        const fraction = config.quotaInfo.remainingFraction;
-        const pct = typeof fraction === "number" ? Math.round(Math.max(0, Math.min(1, fraction)) * 100) : 0;
-        fiveHourPercent = pct;
-        weeklyPercent = pct;
-        if (config.quotaInfo.resetTime) {
-          fiveHourReset = config.quotaInfo.resetTime;
-          weeklyReset = config.quotaInfo.resetTime;
-        }
+    } else if (config.quotaInfo) {
+      const fraction = config.quotaInfo.remainingFraction;
+      const pct = typeof fraction === "number" ? Math.round(Math.max(0, Math.min(1, fraction)) * 100) : 0;
+      fiveHourPercent = pct;
+      weeklyPercent = pct;
+      if (config.quotaInfo.resetTime) {
+        fiveHourReset = config.quotaInfo.resetTime;
+        weeklyReset = config.quotaInfo.resetTime;
       }
     }
 
@@ -101,7 +90,6 @@ export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] 
       fiveHourPercent = 0;
     }
 
-    // Set legacy fields for fallback compatibility
     const percent = fiveHourPercent;
     const refreshTime = fiveHourReset ? formatAbsoluteTime(fiveHourReset) : "Exhausted";
 
@@ -131,20 +119,9 @@ export function parseQuotaData(configs: any[], quotaSummary?: any): QuotaData[] 
   return grouped;
 }
 
-
 const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 function getRelativeTime(isoDate: string): string {
@@ -170,14 +147,12 @@ function getRelativeTime(isoDate: string): string {
     durationStr = `${remainingMinutes} mins`;
   }
 
-  // Format absolute time part: hh:mm AM/PM
   const ampm = futureDate.getHours() >= 12 ? "PM" : "AM";
   let hour12 = futureDate.getHours() % 12;
   hour12 = hour12 ? hour12 : 12;
   const minStr = String(futureDate.getMinutes()).padStart(2, "0");
   const timeStr = `${hour12}:${minStr} ${ampm}`;
 
-  // Determine if it falls on the current day
   const isCurrentDay =
     futureDate.getDate() === now.getDate() &&
     futureDate.getMonth() === now.getMonth() &&
@@ -185,11 +160,11 @@ function getRelativeTime(isoDate: string): string {
 
   if (isCurrentDay) {
     return `${durationStr} | ${timeStr}`;
-  } else {
-    const month = MONTHS[futureDate.getMonth()];
-    const day = futureDate.getDate();
-    return `${durationStr} | ${month} ${day}, ${timeStr}`;
   }
+
+  const month = MONTHS[futureDate.getMonth()];
+  const day = futureDate.getDate();
+  return `${durationStr} | ${month} ${day}, ${timeStr}`;
 }
 
 export function formatAbsoluteTime(isoDate: string): string {
@@ -210,15 +185,10 @@ export function formatAbsoluteTime(isoDate: string): string {
     futureDate.getFullYear() === now.getFullYear();
 
   if (isCurrentDay) {
-    return `${timeStr}`;
-  } else {
-    const MONTHS = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
-    ];
-    const month = MONTHS[futureDate.getMonth()];
-    const day = futureDate.getDate();
-    return `${month} ${day}, ${timeStr}`;
+    return timeStr;
   }
-}
 
+  const month = MONTHS[futureDate.getMonth()];
+  const day = futureDate.getDate();
+  return `${month} ${day}, ${timeStr}`;
+}

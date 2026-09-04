@@ -20,6 +20,8 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 | ![Hover Preview](assets/demo-pics/hover-on-status-bar-item.png) | ![Click Preview](assets/demo-pics/click-on-status-bar-item.png) |
 
 ### 🚀 Key Features
+- **Resilient Quota Sources**: Quota checks use `agy CLI → direct Cloud Code → Antigravity language server`, automatically falling back when a source is unavailable. If `agy` is signed in, CLI-only users do not need a running Antigravity language server.
+- **Background Refresh on Windows**: Quota helper processes run without opening terminal or PowerShell windows.
 - **Active Model Monitoring**: Displays the remaining quota of your selected Gemini model directly in the status bar. If no model is explicitly set, it automatically defaults to the model with the highest remaining quota.
 - **Rich Hover Tooltip**: Hover for a detailed, borderless HTML breakdown of your subscription tier, remaining AI credits, and model reset times. The active model is highlighted with bold text and a pulse icon **$(pulse)$**.
 - **Clean Workspace**: Minimize status bar clutter by clicking "Minimize monitor" in the tooltip to replace the full quota text with a simple `$(credit-card) Quotas` display. Restore it anytime with "Display monitor".
