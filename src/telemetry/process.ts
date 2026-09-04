@@ -14,13 +14,13 @@ export async function locateAntigravityBeacon(): Promise<{ pid: number; token: s
                 'powershell -NoProfile -Command "Get-CimInstance Win32_Process | ' +
                 'Where-Object {$_.Name -like \'*language_server*\'} | ' +
                 'Select-Object ProcessId,CommandLine | ConvertTo-Json"',
-                { timeout: 8000 }
+                { timeout: 8000, windowsHide: true }
             );
             output = stdout;
         } else {
             const { stdout } = await execAsync(
                 'ps -axo pid,args | grep -i language_server | grep -v grep',
-                { timeout: 8000 }
+                { timeout: 8000, windowsHide: true }
             );
             output = stdout;
         }
@@ -75,21 +75,19 @@ export async function detectActivePort(pid: number): Promise<number | null> {
         if (os === 'win32') {
             const { stdout } = await execAsync(
                 `powershell -NoProfile -Command "Get-NetTCPConnection -OwningProcess ${pid} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort"`,
-                { timeout: 5000 }
+                { timeout: 5000, windowsHide: true }
             );
             output = stdout;
         } else if (os === 'darwin') {
             const { stdout } = await execAsync(
                 `lsof -iTCP -sTCP:LISTEN -a -p ${pid} -Fn 2>/dev/null | grep '^n' | sed 's/n\\*://'`,
-                { timeout: 5000 }
+                { timeout: 5000, windowsHide: true }
             );
             output = stdout;
         } else {
-            // Using -H to suppress headers and -n for numeric addresses
-            // We search for the pid in the entire line and then extract the port
             const { stdout } = await execAsync(
                 `ss -tlnpH 2>/dev/null | grep -F "pid=${pid},"`,
-                { timeout: 5000 }
+                { timeout: 5000, windowsHide: true }
             );
             output = stdout;
         }
@@ -103,9 +101,6 @@ export async function detectActivePort(pid: number): Promise<number | null> {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        // Match port: either just digits (Windows/macOS) or :PORT (Linux)
-        // We look for digits that are either at the start of the line or preceded by a colon,
-        // and followed by either whitespace or the end of the line.
         const match = trimmed.match(/(?:^|:)(\d+)(?:\s|$)/);
         if (match) {
             ports.push(parseInt(match[1], 10));
@@ -114,4 +109,3 @@ export async function detectActivePort(pid: number): Promise<number | null> {
 
     return ports.length > 0 ? ports[0] : null;
 }
-

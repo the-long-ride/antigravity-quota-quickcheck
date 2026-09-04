@@ -1,67 +1,31 @@
-import { FullStatus, QuotaData } from "./types";
-import { locateAntigravityBeacon, detectActivePort } from "./process";
-import { queryServer } from "./client";
-import { parseFullStatus } from "./parser";
+import { FullStatus } from './types';
+import { fetchFromProviders } from './providers';
 
-export * from "./types";
-export { formatAbsoluteTime, resolveQuotaModelName } from "./parser";
+export * from './types';
+export { formatAbsoluteTime, resolveQuotaModelName } from './parser';
 
-let cachedPid: number | null = null;
-let cachedToken: string | null = null;
-let cachedPort: number | null = null;
+type StatusFetch = (force: boolean) => Promise<FullStatus>;
 
-let cachedStatus: FullStatus | null = null;
+export function createSingleFlight(source: StatusFetch): StatusFetch {
+  let inFlight: Promise<FullStatus> | null = null;
 
-export async function fetchFullStatus(
-  force: boolean = false,
-): Promise<FullStatus> {
-  let rawData: any;
-  let rawQuotaSummary: any;
+  return (force: boolean): Promise<FullStatus> => {
+    if (inFlight) return inFlight;
 
-  // Path A: Try cached connection
-  if (cachedPid && cachedToken && cachedPort) {
-    try {
-      [rawData, rawQuotaSummary] = await Promise.all([
-        queryServer(cachedPid, cachedToken, "/exa.language_server_pb.LanguageServerService/GetUserStatus"),
-        queryServer(cachedPid, cachedToken, "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").catch(() => null)
-      ]);
-    } catch {
-      cachedPid = null;
-      cachedToken = null;
-      cachedPort = null;
-    }
-  }
-
-  // Path B: Locate and query server if Path A failed
-  if (!rawData) {
-    const processData = await locateAntigravityBeacon();
-    if (!processData) throw new Error("Could not locate Antigravity process.");
-
-    const { pid, token } = processData;
-    const port = await detectActivePort(pid);
-    if (!port) throw new Error("Could not detect Antigravity port.");
-
-    cachedPid = pid;
-    cachedToken = token;
-    cachedPort = port;
-
-    [rawData, rawQuotaSummary] = await Promise.all([
-      queryServer(port, token, "/exa.language_server_pb.LanguageServerService/GetUserStatus"),
-      queryServer(port, token, "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary").catch(() => null)
-    ]);
-    if (!rawData)
-      throw new Error("Failed to fetch data from Antigravity server.");
-  }
-
-  const newStatus = parseFullStatus(rawData, rawQuotaSummary);
-
-  // Fallback to highest quota model if none is set
-  if (newStatus.quotas.length > 0) {
-    newStatus.recentlyUsedModel = newStatus.quotas[0].model;
-  }
-
-  cachedStatus = newStatus;
-  return newStatus;
+    inFlight = source(force).finally(() => {
+      inFlight = null;
+    });
+    return inFlight;
+  };
 }
 
+const fetchSingleFlight = createSingleFlight(fetchFromProviders);
 
+export function fetchFullStatus(force: boolean = false): Promise<FullStatus> {
+  return fetchSingleFlight(force).then((status) => {
+    if (status.quotas.length > 0) {
+      status.recentlyUsedModel = status.quotas[0].model;
+    }
+    return status;
+  });
+}
