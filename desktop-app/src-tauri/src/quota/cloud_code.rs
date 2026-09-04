@@ -33,10 +33,10 @@ pub fn normalize_cloud_snapshot(
     available_models: &Value,
 ) -> Result<FullStatus, ProviderError> {
     let plan_tier = load_code_assist
-        .pointer("/paidTier/id")
-        .or_else(|| load_code_assist.pointer("/currentTier/id"))
-        .or_else(|| load_code_assist.pointer("/paidTier/name"))
+        .pointer("/paidTier/name")
         .or_else(|| load_code_assist.pointer("/currentTier/name"))
+        .or_else(|| load_code_assist.pointer("/paidTier/id"))
+        .or_else(|| load_code_assist.pointer("/currentTier/id"))
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
         .map(str::to_string);
