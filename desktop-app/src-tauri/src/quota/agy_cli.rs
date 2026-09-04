@@ -7,6 +7,7 @@ use tokio::process::Command;
 use crate::{FullStatus, QuotaData};
 
 use super::credentials::find_agy_binary;
+use super::process::hide_tokio_command;
 use super::{is_usable_status, ProviderError, ProviderErrorKind};
 
 const PROVIDER: &str = "agy CLI";
@@ -194,6 +195,7 @@ pub async fn fetch() -> Result<FullStatus, ProviderError> {
 
 async fn run_structured_command(binary: &std::path::Path, slash_command: &str) -> Result<String, ProviderError> {
     let mut command = Command::new(binary);
+    hide_tokio_command(&mut command);
     command
         .args(["-p", slash_command, "--output-format", "json"])
         .stdin(Stdio::null())
