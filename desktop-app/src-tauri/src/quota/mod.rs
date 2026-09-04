@@ -2,6 +2,7 @@ pub mod agy_cli;
 pub mod cloud_code;
 pub mod credentials;
 pub mod language_server;
+pub mod process;
 
 use crate::FullStatus;
 
