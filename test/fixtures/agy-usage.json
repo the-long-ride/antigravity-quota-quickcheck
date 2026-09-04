@@ -1,0 +1,38 @@
+{
+  "command": {
+    "data": {
+      "groups": [
+        {
+          "name": "Gemini Models",
+          "buckets": [
+            {
+              "window": "5h",
+              "remaining_fraction": 1.0,
+              "reset_time": "2026-09-04T18:00:00Z"
+            },
+            {
+              "window": "weekly",
+              "remaining_fraction": 0.72,
+              "reset_time": "2026-09-08T00:00:00Z"
+            }
+          ]
+        },
+        {
+          "name": "Claude and GPT models",
+          "buckets": [
+            {
+              "window": "5h",
+              "remaining_fraction": 0.8,
+              "reset_time": "2026-09-04T17:00:00Z"
+            },
+            {
+              "window": "weekly",
+              "remaining_fraction": 0.55,
+              "reset_time": "2026-09-09T00:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
