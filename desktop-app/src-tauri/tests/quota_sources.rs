@@ -91,7 +91,15 @@ fn extracts_and_deduplicates_oauth_client_pairs() {
 #[test]
 fn cloud_snapshot_groups_provider_pools_without_inventing_windows() {
     let load = serde_json::json!({
-        "paidTier": {"id": "pro", "availableCredits": [{"creditAmount": "12.5"}, {"creditAmount": 2}]}
+        "currentTier": {"id": "free-tier", "name": "Antigravity"},
+        "paidTier": {
+            "id": "g1-pro-tier",
+            "name": "Google AI Pro",
+            "availableCredits": [
+                {"creditType": "GOOGLE_ONE_AI", "creditAmount": "12.5"},
+                {"creditType": "GOOGLE_ONE_AI", "creditAmount": 2}
+            ]
+        }
     });
     let quota = serde_json::json!({
         "buckets": [
@@ -107,7 +115,7 @@ fn cloud_snapshot_groups_provider_pools_without_inventing_windows() {
     });
 
     let status = normalize_cloud_snapshot(&load, &quota, &models).unwrap();
-    assert_eq!(status.plan_tier.as_deref(), Some("pro"));
+    assert_eq!(status.plan_tier.as_deref(), Some("Google AI Pro"));
     assert_eq!(status.credits.as_ref().unwrap().balance, 14.5);
     let gemini = status.quotas.iter().find(|q| q.model == "Gemini").unwrap();
     assert_eq!(gemini.percent, 64);
@@ -117,4 +125,11 @@ fn cloud_snapshot_groups_provider_pools_without_inventing_windows() {
     assert_eq!(shared.percent, 42);
     assert!(shared.five_hour_disabled);
     assert!(shared.weekly_disabled);
+}
+
+#[test]
+fn cloud_snapshot_falls_back_to_tier_id_when_name_is_missing() {
+    let load = serde_json::json!({"paidTier": {"id": "g1-pro-tier"}});
+    let status = normalize_cloud_snapshot(&load, &serde_json::json!({}), &serde_json::json!({})).unwrap();
+    assert_eq!(status.plan_tier.as_deref(), Some("g1-pro-tier"));
 }
