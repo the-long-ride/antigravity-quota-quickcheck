@@ -1,0 +1,62 @@
+name: Feature CI
+
+on:
+  push:
+    branches:
+      - feat/cli-quota-provider-chain
+
+concurrency:
+  group: feature-cli-quota-provider-chain
+  cancel-in-progress: true
+
+jobs:
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run compile
+
+  desktop-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: desktop-app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Install desktop dependencies
+        working-directory: desktop-app
+        run: npm ci
+      - name: Desktop UI contract
+        working-directory: desktop-app
+        run: npm run test:ui
+      - name: Desktop frontend build
+        working-directory: desktop-app
+        run: npm run build
+      - name: Rust tests
+        working-directory: desktop-app/src-tauri
+        run: cargo test
+      - name: Rust check
+        working-directory: desktop-app/src-tauri
+        run: cargo check --lib
+
+  desktop-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Windows Rust check
+        working-directory: desktop-app/src-tauri
+        run: cargo check --lib
