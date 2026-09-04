@@ -9,6 +9,11 @@ use quota::credentials::{decode_keyring_secret, extract_oauth_clients, parse_cre
 use quota::ProviderErrorKind;
 
 #[test]
+fn create_no_window_flag_is_correct() {
+    assert_eq!(tauri_app_lib::quota::process::CREATE_NO_WINDOW_FLAG, 0x0800_0000);
+}
+
+#[test]
 fn parses_agy_grouped_quota_windows() {
     let input = r#"{
       "command": {"data": {"groups": [
