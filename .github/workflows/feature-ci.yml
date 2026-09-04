@@ -29,14 +29,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
-          cache-dependency-path: desktop-app/package-lock.json
-      - name: Install desktop dependencies
-        working-directory: desktop-app
-        run: npm ci
       - name: Desktop UI contract
         working-directory: desktop-app
         run: npm run test:ui
+      - name: Install desktop dependencies
+        working-directory: desktop-app
+        run: npm ci
       - name: Desktop frontend build
         working-directory: desktop-app
         run: npm run build
