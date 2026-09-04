@@ -139,8 +139,8 @@ function formatAbsoluteTime(isoDate: string): string {
   }
 
   const MONTHS = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
   const month = MONTHS[futureDate.getMonth()];
   const day = futureDate.getDate();
@@ -177,7 +177,6 @@ function updateUI(status: FullStatus | null) {
   } else {
     creditAmount.textContent = "—";
   }
-
   if (status.quotas.length === 0) {
     quotasList.innerHTML = `
       <div class="loading-state">
