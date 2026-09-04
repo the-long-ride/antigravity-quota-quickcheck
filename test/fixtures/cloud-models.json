@@ -1,0 +1,22 @@
+{
+  "models": {
+    "gemini-3-pro": {
+      "quotaInfo": {
+        "remainingFraction": "0.64",
+        "resetTime": "2026-09-04T17:00:00Z"
+      }
+    },
+    "claude-sonnet-4": {
+      "quotaInfo": {
+        "remainingFraction": "0.42",
+        "resetTime": "2026-09-04T16:00:00Z"
+      }
+    },
+    "gpt-5": {
+      "quotaInfo": {
+        "remainingFraction": 0.42,
+        "resetTime": "2026-09-04T16:00:00Z"
+      }
+    }
+  }
+}
