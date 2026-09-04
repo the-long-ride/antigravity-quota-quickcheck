@@ -62,7 +62,12 @@ pub async fn fetch_full_status() -> Result<FullStatus, String> {
     let mut errors = Vec::new();
 
     match agy_cli::fetch().await {
-        Ok(status) if is_usable_status(&status) => return Ok(status),
+        Ok(mut status) if is_usable_status(&status) => {
+            if let Ok(Some(plan_tier)) = cloud_code::fetch_plan_tier().await {
+                status.plan_tier = Some(plan_tier);
+            }
+            return Ok(status);
+        }
         Ok(_) => errors.push("agy CLI: empty quota snapshot".to_string()),
         Err(error) => errors.push(error.to_string()),
     }

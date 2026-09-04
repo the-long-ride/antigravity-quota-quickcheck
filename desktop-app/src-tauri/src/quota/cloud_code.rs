@@ -1,4 +1,5 @@
-use std::time::Duration;
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use reqwest::Client;
 use serde_json::{json, Value};
@@ -12,6 +13,9 @@ const PROVIDER: &str = "Cloud Code";
 const CLOUD_CODE_BASE: &str = "https://cloudcode-pa.googleapis.com";
 const TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const HTTP_TIMEOUT: Duration = Duration::from_secs(12);
+const PLAN_TIER_CACHE_TTL: Duration = Duration::from_secs(10 * 60);
+
+static PLAN_TIER_CACHE: OnceLock<Mutex<Option<(String, Instant)>>> = OnceLock::new();
 
 #[derive(Default, Clone)]
 struct PoolValue {
@@ -27,19 +31,38 @@ struct ProviderPool {
     weekly: PoolValue,
 }
 
+fn plan_tier_cache() -> &'static Mutex<Option<(String, Instant)>> {
+    PLAN_TIER_CACHE.get_or_init(|| Mutex::new(None))
+}
+
+fn extract_plan_tier(load: &Value) -> Option<String> {
+    load.pointer("/paidTier/name")
+        .or_else(|| load.pointer("/currentTier/name"))
+        .or_else(|| load.pointer("/paidTier/id"))
+        .or_else(|| load.pointer("/currentTier/id"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+fn cache_plan_tier(plan_tier: &str) {
+    if let Ok(mut cache) = plan_tier_cache().lock() {
+        *cache = Some((plan_tier.to_string(), Instant::now() + PLAN_TIER_CACHE_TTL));
+    }
+}
+
+fn cached_plan_tier() -> Option<String> {
+    let cache = plan_tier_cache().lock().ok()?;
+    let (value, expires_at) = cache.as_ref()?;
+    (Instant::now() < *expires_at).then(|| value.clone())
+}
+
 pub fn normalize_cloud_snapshot(
     load_code_assist: &Value,
     user_quota: &Value,
     available_models: &Value,
 ) -> Result<FullStatus, ProviderError> {
-    let plan_tier = load_code_assist
-        .pointer("/paidTier/id")
-        .or_else(|| load_code_assist.pointer("/currentTier/id"))
-        .or_else(|| load_code_assist.pointer("/paidTier/name"))
-        .or_else(|| load_code_assist.pointer("/currentTier/name"))
-        .and_then(Value::as_str)
-        .filter(|s| !s.is_empty())
-        .map(str::to_string);
+    let plan_tier = extract_plan_tier(load_code_assist);
 
     let credits = sum_available_credits(load_code_assist).map(|balance| CreditInfo {
         balance,
@@ -229,7 +252,7 @@ fn build_card(model: &str, pool: ProviderPool) -> QuotaData {
     }
 }
 
-pub async fn fetch() -> Result<FullStatus, ProviderError> {
+async fn build_authenticated_client() -> Result<(Client, String), ProviderError> {
     let credential = load_credential().await?;
     let agy = find_agy_binary()
         .ok_or_else(|| ProviderError::new(PROVIDER, ProviderErrorKind::Unavailable, "agy executable was not found for OAuth client discovery"))?;
@@ -239,6 +262,36 @@ pub async fn fetch() -> Result<FullStatus, ProviderError> {
         .build()
         .map_err(|_| ProviderError::new(PROVIDER, ProviderErrorKind::Transient, "could not initialize HTTPS client"))?;
     let access_token = refresh_access_token(&client, &credential.refresh_token, &candidates).await?;
+    Ok((client, access_token))
+}
+
+pub async fn fetch_plan_tier() -> Result<Option<String>, ProviderError> {
+    if let Some(plan_tier) = cached_plan_tier() {
+        return Ok(Some(plan_tier));
+    }
+
+    let (client, access_token) = build_authenticated_client().await?;
+    let load = post_cloud_json(
+        &client,
+        "loadCodeAssist",
+        &access_token,
+        json!({
+            "metadata": cloud_metadata(),
+            "mode": "FULL_ELIGIBILITY_CHECK"
+        }),
+        false,
+    )
+    .await?;
+
+    let plan_tier = extract_plan_tier(&load);
+    if let Some(value) = plan_tier.as_deref() {
+        cache_plan_tier(value);
+    }
+    Ok(plan_tier)
+}
+
+pub async fn fetch() -> Result<FullStatus, ProviderError> {
+    let (client, access_token) = build_authenticated_client().await?;
 
     let load = post_cloud_json(
         &client,
@@ -252,6 +305,10 @@ pub async fn fetch() -> Result<FullStatus, ProviderError> {
     )
     .await
     .unwrap_or(Value::Null);
+
+    if let Some(plan_tier) = extract_plan_tier(&load) {
+        cache_plan_tier(&plan_tier);
+    }
 
     let user_quota = post_cloud_json(&client, "retrieveUserQuota", &access_token, json!({}), false)
         .await

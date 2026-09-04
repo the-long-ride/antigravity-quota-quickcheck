@@ -1,9 +1,14 @@
 {
+  "currentTier": {
+    "id": "free-tier",
+    "name": "Antigravity"
+  },
   "paidTier": {
-    "id": "pro",
+    "id": "g1-pro-tier",
+    "name": "Google AI Pro",
     "availableCredits": [
-      { "creditAmount": "12.5" },
-      { "creditAmount": 2 }
+      { "creditType": "GOOGLE_ONE_AI", "creditAmount": "12.5" },
+      { "creditType": "GOOGLE_ONE_AI", "creditAmount": 2 }
     ]
   },
   "cloudaicompanionProject": {

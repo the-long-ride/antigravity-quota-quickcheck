@@ -159,13 +159,13 @@ test('OAuth client extraction deduplicates discovered candidate pairs', () => {
   assert.deepEqual(pairs[0], { clientId, clientSecret });
 });
 
-test('Cloud Code fixture normalizes plan, credits, and provider pools', () => {
+test('Cloud Code fixture normalizes Google AI subscription, credits, and provider pools', () => {
   const load = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'cloud-load-code-assist.json'), 'utf8'));
   const quota = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'cloud-retrieve-user-quota.json'), 'utf8'));
   const models = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'cloud-models.json'), 'utf8'));
 
   const status = parseCloudCodeStatus(load, quota, models);
-  assert.equal(status.planTier, 'pro');
+  assert.equal(status.planTier, 'Google AI Pro');
   assert.equal(status.credits.balance, 14.5);
   assert.deepEqual(status.quotas.map((q) => q.model), ['Gemini', 'Claude & OpenAI']);
 
@@ -178,6 +178,15 @@ test('Cloud Code fixture normalizes plan, credits, and provider pools', () => {
   assert.equal(shared.percent, 42);
   assert.equal(shared.fiveHourDisabled, true);
   assert.equal(shared.weeklyDisabled, true);
+});
+
+test('Cloud Code plan falls back to tier id when no human-readable name exists', () => {
+  const status = parseCloudCodeStatus(
+    { paidTier: { id: 'g1-pro-tier' } },
+    {},
+    {},
+  );
+  assert.equal(status.planTier, 'g1-pro-tier');
 });
 
 test('Cloud Code parser preserves explicit windows and numeric strings', () => {

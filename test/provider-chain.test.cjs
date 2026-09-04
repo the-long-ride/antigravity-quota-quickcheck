@@ -31,7 +31,7 @@ function failure(name, calls) {
 function success(name, calls) {
   return async () => {
     calls.push(name);
-    return good;
+    return { ...good, quotas: good.quotas.map((quota) => ({ ...quota })) };
   };
 }
 
@@ -43,8 +43,40 @@ test('production provider helper stops after CLI success', async () => {
     failure('cloud', calls),
     failure('language', calls),
   );
-  assert.equal(result, good);
+  assert.deepEqual(result.quotas, good.quotas);
   assert.deepEqual(calls, ['cli']);
+});
+
+test('CLI result can be enriched with the exact Google AI subscription without changing quota source', async () => {
+  const calls = [];
+  const result = await fetchFromProvidersWith(
+    false,
+    success('cli', calls),
+    failure('cloud', calls),
+    failure('language', calls),
+    async (status) => {
+      calls.push('subscription');
+      status.planTier = 'Google AI Pro';
+    },
+  );
+  assert.equal(result.planTier, 'Google AI Pro');
+  assert.deepEqual(calls, ['cli', 'subscription']);
+});
+
+test('subscription enrichment failure keeps successful CLI quota', async () => {
+  const calls = [];
+  const result = await fetchFromProvidersWith(
+    false,
+    success('cli', calls),
+    failure('cloud', calls),
+    failure('language', calls),
+    async () => {
+      calls.push('subscription');
+      throw new Error('metadata unavailable');
+    },
+  );
+  assert.deepEqual(result.quotas, good.quotas);
+  assert.deepEqual(calls, ['cli', 'subscription']);
 });
 
 test('production provider helper falls from CLI to Cloud Code', async () => {
@@ -55,7 +87,7 @@ test('production provider helper falls from CLI to Cloud Code', async () => {
     success('cloud', calls),
     failure('language', calls),
   );
-  assert.equal(result, good);
+  assert.deepEqual(result.quotas, good.quotas);
   assert.deepEqual(calls, ['cli', 'cloud']);
 });
 
@@ -67,7 +99,7 @@ test('production provider helper falls through to language server last', async (
     failure('cloud', calls),
     success('language', calls),
   );
-  assert.equal(result, good);
+  assert.deepEqual(result.quotas, good.quotas);
   assert.deepEqual(calls, ['cli', 'cloud', 'language']);
 });
 

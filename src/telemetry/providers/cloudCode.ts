@@ -13,6 +13,7 @@ const CLOUD_CODE_BASE = 'https://cloudcode-pa.googleapis.com';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const MISSING_COOLDOWN_MS = 60_000;
 const TRANSIENT_COOLDOWN_MS = 20_000;
+const PLAN_TIER_CACHE_MS = 10 * 60_000;
 
 interface PoolValue {
   percent: number;
@@ -35,6 +36,7 @@ let missingUntil = 0;
 let transientUntil = 0;
 let workingClient: OauthClient | null = null;
 let rotatedRefreshToken: string | null = null;
+let planTierCache: { value: string; expiresAt: number } | null = null;
 
 function emptyPoolValue(): PoolValue {
   return { percent: 0, reset: '', present: false };
@@ -151,19 +153,23 @@ function sumAvailableCredits(load: any): CreditInfo | null {
   return found ? { balance: total, creditType: 'AI' } : null;
 }
 
+function extractPlanTier(load: any): string | null {
+  const tierCandidate =
+    load?.paidTier?.name ??
+    load?.currentTier?.name ??
+    load?.paidTier?.id ??
+    load?.currentTier?.id;
+  return typeof tierCandidate === 'string' && tierCandidate
+    ? tierCandidate
+    : null;
+}
+
 export function parseCloudCodeStatus(
   loadCodeAssist: any,
   userQuota: any,
   availableModels: any,
 ): FullStatus {
-  const tierCandidate =
-    loadCodeAssist?.paidTier?.id ??
-    loadCodeAssist?.currentTier?.id ??
-    loadCodeAssist?.paidTier?.name ??
-    loadCodeAssist?.currentTier?.name;
-  const planTier = typeof tierCandidate === 'string' && tierCandidate
-    ? tierCandidate
-    : null;
+  const planTier = extractPlanTier(loadCodeAssist);
   const credits = sumAvailableCredits(loadCodeAssist);
 
   const gemini = emptyProviderPool();
@@ -346,10 +352,7 @@ async function refreshAccessToken(
     if (workingClient) {
       workingClient = null;
       candidates = await readOauthClientsFromAgy();
-      const retryToken = preferredRefreshToken === credential.refreshToken
-        ? credential.refreshToken
-        : credential.refreshToken;
-      const result = await refreshWithClients(retryToken, candidates);
+      const result = await refreshWithClients(credential.refreshToken, candidates);
       if (result.refreshToken) rotatedRefreshToken = result.refreshToken;
       return result.accessToken;
     }
@@ -410,6 +413,28 @@ async function optionalCloudCall(
   }
 }
 
+export async function fetchCloudCodePlanTier(force: boolean = false): Promise<string | null> {
+  const now = Date.now();
+  if (!force && planTierCache && now < planTierCache.expiresAt) {
+    return planTierCache.value;
+  }
+
+  const credential = await loadAgyCredential();
+  const accessToken = await refreshAccessToken(credential);
+  const load = await postCloudJson('loadCodeAssist', accessToken, {
+    metadata: cloudMetadata(),
+    mode: 'FULL_ELIGIBILITY_CHECK',
+  });
+  const planTier = extractPlanTier(load);
+  if (planTier) {
+    planTierCache = {
+      value: planTier,
+      expiresAt: Date.now() + PLAN_TIER_CACHE_MS,
+    };
+  }
+  return planTier;
+}
+
 export async function fetchCloudCode(force: boolean): Promise<FullStatus> {
   const now = Date.now();
   if (now < missingUntil) {
@@ -448,6 +473,11 @@ export async function fetchCloudCode(force: boolean): Promise<FullStatus> {
       }),
       optionalCloudCall('retrieveUserQuota', accessToken, {}),
     ]);
+
+    const planTier = extractPlanTier(load);
+    if (planTier) {
+      planTierCache = { value: planTier, expiresAt: Date.now() + PLAN_TIER_CACHE_MS };
+    }
 
     const project = extractProjectId(load);
     const models = await optionalCloudCall(

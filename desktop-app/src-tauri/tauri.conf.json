@@ -16,7 +16,7 @@
         "label": "main",
         "title": "Antigravity Quota Quickcheck",
         "width": 680,
-        "height": 380,
+        "height": 420,
         "decorations": false,
         "shadow": false,
         "transparent": true,
@@ -43,6 +43,7 @@
     "windows": {
       "nsis": {
         "template": "installer.nsi",
+        "installerHooks": "installer-hooks.nsh",
         "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico"
       }
