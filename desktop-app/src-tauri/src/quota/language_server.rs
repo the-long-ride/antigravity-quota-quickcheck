@@ -5,6 +5,7 @@ use serde_json::Value;
 
 use crate::{CreditInfo, FullStatus, QuotaData};
 
+use super::process::hide_std_command;
 use super::{ProviderError, ProviderErrorKind};
 
 const PROVIDER: &str = "language server";
@@ -24,7 +25,9 @@ fn cache() -> &'static Mutex<Cache> {
 
 #[cfg(target_os = "windows")]
 fn scan_processes() -> Option<(u32, String)> {
-    let output = Command::new("powershell")
+    let mut command = Command::new("powershell");
+    hide_std_command(&mut command);
+    let output = command
         .args([
             "-NoProfile",
             "-Command",
@@ -53,7 +56,9 @@ fn scan_processes() -> Option<(u32, String)> {
 
 #[cfg(not(target_os = "windows"))]
 fn scan_processes() -> Option<(u32, String)> {
-    let output = Command::new("sh")
+    let mut command = Command::new("sh");
+    hide_std_command(&mut command);
+    let output = command
         .args(["-c", "ps -axo pid,args | grep -i language_server | grep -v grep"])
         .output()
         .ok()?;
@@ -71,12 +76,14 @@ fn scan_processes() -> Option<(u32, String)> {
 
 #[cfg(target_os = "windows")]
 fn scan_port(pid: u32) -> Option<u16> {
-    let command = format!(
+    let command_text = format!(
         "Get-NetTCPConnection -OwningProcess {} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort",
         pid
     );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-Command", &command])
+    let mut command = Command::new("powershell");
+    hide_std_command(&mut command);
+    let output = command
+        .args(["-NoProfile", "-Command", &command_text])
         .output()
         .ok()?;
     String::from_utf8_lossy(&output.stdout)
@@ -90,11 +97,13 @@ fn scan_port(pid: u32) -> Option<u16> {
 
 #[cfg(target_os = "macos")]
 fn scan_port(pid: u32) -> Option<u16> {
-    let command = format!(
+    let command_text = format!(
         "lsof -iTCP -sTCP:LISTEN -a -p {} -Fn 2>/dev/null | grep '^n' | sed 's/n\\*://'",
         pid
     );
-    let output = Command::new("sh").args(["-c", &command]).output().ok()?;
+    let mut command = Command::new("sh");
+    hide_std_command(&mut command);
+    let output = command.args(["-c", &command_text]).output().ok()?;
     String::from_utf8_lossy(&output.stdout)
         .trim()
         .lines()
@@ -106,8 +115,10 @@ fn scan_port(pid: u32) -> Option<u16> {
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn scan_port(pid: u32) -> Option<u16> {
-    let command = format!("ss -tlnpH 2>/dev/null | grep -F \"pid={},\"", pid);
-    let output = Command::new("sh").args(["-c", &command]).output().ok()?;
+    let command_text = format!("ss -tlnpH 2>/dev/null | grep -F \"pid={},\"", pid);
+    let mut command = Command::new("sh");
+    hide_std_command(&mut command);
+    let output = command.args(["-c", &command_text]).output().ok()?;
     let line = String::from_utf8_lossy(&output.stdout).trim().lines().next()?.to_string();
     let port_re = regex::Regex::new(r"(?:^|:)(\d+)(?:\s|$)").ok()?;
     port_re.captures(&line)?.get(1)?.as_str().parse::<u16>().ok()
