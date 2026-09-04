@@ -43,8 +43,9 @@ dependencies = [
 
 [[package]]
 name = "antigravity-quota-tray"
-version = "1.2.3"
+version = "1.3.0"
 dependencies = [
+ "base64 0.22.1",
  "raw-window-handle",
  "regex",
  "reqwest 0.12.28",
@@ -3956,6 +3957,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "windows-sys 0.61.2",
 ]
