@@ -157,10 +157,10 @@ export function parseCloudCodeStatus(
   availableModels: any,
 ): FullStatus {
   const tierCandidate =
-    loadCodeAssist?.paidTier?.id ??
-    loadCodeAssist?.currentTier?.id ??
     loadCodeAssist?.paidTier?.name ??
-    loadCodeAssist?.currentTier?.name;
+    loadCodeAssist?.currentTier?.name ??
+    loadCodeAssist?.paidTier?.id ??
+    loadCodeAssist?.currentTier?.id;
   const planTier = typeof tierCandidate === 'string' && tierCandidate
     ? tierCandidate
     : null;
