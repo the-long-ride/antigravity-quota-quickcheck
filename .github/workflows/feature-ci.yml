@@ -32,9 +32,9 @@ jobs:
       - name: Desktop UI contract
         working-directory: desktop-app
         run: npm run test:ui
-      - name: Install desktop dependencies
+      - name: Install desktop frontend dependencies
         working-directory: desktop-app
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Desktop frontend build
         working-directory: desktop-app
         run: npm run build
