@@ -242,12 +242,15 @@ fn position_window(window: &tauri::WebviewWindow) {
         let monitor_size = monitor.size();
         let monitor_pos = monitor.position();
         let scale_factor = monitor.scale_factor();
-        let win_w = (680.0 * scale_factor) as i32;
-        let win_h = (650.0 * scale_factor) as i32;
+        let fallback_w = (680.0 * scale_factor) as u32;
+        let fallback_h = (380.0 * scale_factor) as u32;
+        let size = window
+            .outer_size()
+            .unwrap_or(tauri::PhysicalSize::new(fallback_w, fallback_h));
         let padding = (12.0 * scale_factor) as i32;
         let taskbar_h = (48.0 * scale_factor) as i32;
-        let x = monitor_pos.x + monitor_size.width as i32 - win_w - padding;
-        let y = monitor_pos.y + monitor_size.height as i32 - win_h - taskbar_h - padding;
+        let x = monitor_pos.x + monitor_size.width as i32 - size.width as i32 - padding;
+        let y = monitor_pos.y + monitor_size.height as i32 - size.height as i32 - taskbar_h - padding;
         let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
     }
 }
