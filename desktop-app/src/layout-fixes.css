@@ -1,0 +1,13 @@
+/* Keep the quota cards flush with the content padding above the footer while
+   preserving scrolling if future content exceeds the available height. */
+.quotas-section {
+  flex: 1 1 auto;
+}
+
+.quotas-list {
+  flex: 1 1 auto;
+}
+
+.quota-item {
+  flex: 1 0 auto;
+}
