@@ -19,13 +19,14 @@ export function createSingleFlight(source: StatusFetch): StatusFetch {
   };
 }
 
-const fetchSingleFlight = createSingleFlight(fetchFromProviders);
+const fetchSingleFlight = createSingleFlight(async (force) => {
+  const status = await fetchFromProviders(force);
+  if (status.quotas.length > 0) {
+    status.recentlyUsedModel = status.quotas[0].model;
+  }
+  return status;
+});
 
 export function fetchFullStatus(force: boolean = false): Promise<FullStatus> {
-  return fetchSingleFlight(force).then((status) => {
-    if (status.quotas.length > 0) {
-      status.recentlyUsedModel = status.quotas[0].model;
-    }
-    return status;
-  });
+  return fetchSingleFlight(force);
 }
