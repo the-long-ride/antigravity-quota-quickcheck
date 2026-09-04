@@ -55,6 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Focused process-helper test
+        working-directory: desktop-app/src-tauri
+        run: cargo test create_no_window_flag_is_correct
       - name: Windows Rust check
         working-directory: desktop-app/src-tauri
         run: cargo check --lib
