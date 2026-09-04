@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Three-Layer Quota Fallback**: The VS Code extension and desktop app now prefer structured `agy` CLI usage, fall back to direct Cloud Code with the existing `agy` sign-in, and use the Antigravity language server as the final source.
+
+### Changed
+- **Compact Desktop Panel**: Reduced the desktop tray dashboard to `680×380` and removed the large unused quota-area gap.
+- **Short Reset Dates**: Reset timestamps use abbreviated month names such as `Sep 11, 10:18 AM`.
+- **Hidden Windows Helpers**: Background quota refresh helpers no longer open visible terminal or PowerShell windows on Windows.
+- **Source-Neutral Extension Errors**: Extension retry messaging no longer assumes the language server was the failed source.
+
 ## [1.2.3] - 2026-06-22
 
 ### Added

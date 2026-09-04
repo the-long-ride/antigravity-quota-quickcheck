@@ -1,6 +1,10 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { parseQuotaData, resolveQuotaModelName } = require("../out/telemetry/parser.js");
+const {
+  parseQuotaData,
+  resolveQuotaModelName,
+  formatAbsoluteTime,
+} = require("../out/telemetry/parser.js");
 
 const configs = [
   { label: "Gemini 3 Pro" },
@@ -69,4 +73,10 @@ test("uses shared Claude/OpenAI quota for OpenAI model labels without GPT", () =
   assert.equal(result[0].model, "Claude & OpenAI");
   assert.equal(result[0].fiveHourPercent, 52);
   assert.equal(result[0].weeklyPercent, 26);
+});
+
+test("formats non-current reset dates with abbreviated months", () => {
+  const formatted = formatAbsoluteTime("2030-09-11T03:18:00Z");
+  assert.match(formatted, /\bSep\s+11\b/);
+  assert.doesNotMatch(formatted, /September/);
 });

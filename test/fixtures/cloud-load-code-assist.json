@@ -1,0 +1,12 @@
+{
+  "paidTier": {
+    "id": "pro",
+    "availableCredits": [
+      { "creditAmount": "12.5" },
+      { "creditAmount": 2 }
+    ]
+  },
+  "cloudaicompanionProject": {
+    "projectId": "example-project"
+  }
+}

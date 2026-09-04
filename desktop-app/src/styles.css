@@ -315,7 +315,7 @@ html, body {
 
 /* Quotas List */
 .quotas-section {
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -341,7 +341,7 @@ html, body {
 }
 
 .quotas-list {
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -617,7 +617,6 @@ html, body {
   margin-bottom: 16px;
   line-height: 1.4;
 }
-
 .dialog-btn {
   background: var(--text-primary);
   color: var(--bg-color);
@@ -658,4 +657,3 @@ html, body {
 [data-theme="light"] .dialog-btn--cancel:hover {
   background: rgba(0, 0, 0, 0.05);
 }
-

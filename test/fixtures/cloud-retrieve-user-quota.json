@@ -1,0 +1,10 @@
+{
+  "buckets": [
+    {
+      "modelId": "gemini-3-pro",
+      "tokenType": "REQUESTS",
+      "remainingFraction": "0.67",
+      "resetTime": "2026-09-04T18:00:00Z"
+    }
+  ]
+}
