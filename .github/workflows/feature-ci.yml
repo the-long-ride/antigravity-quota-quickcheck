@@ -31,11 +31,6 @@ jobs:
           node-version: '20'
           cache: npm
           cache-dependency-path: desktop-app/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
       - name: Install desktop dependencies
         working-directory: desktop-app
         run: npm ci
@@ -45,6 +40,11 @@ jobs:
       - name: Desktop frontend build
         working-directory: desktop-app
         run: npm run build
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
       - name: Rust tests
         working-directory: desktop-app/src-tauri
         run: cargo test
