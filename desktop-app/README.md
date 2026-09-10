@@ -1,6 +1,8 @@
 # 🖥️ Antigravity Quota Quickcheck — Desktop App
 
-A Tauri-powered standalone tray application that monitors your Google AI model quotas and credit balances in real-time. It runs quietly in your system tray and lets you keep track of your quotas even when VS Code is closed.
+A Tauri-powered standalone tray application that monitors the current Antigravity login's Google AI model quotas and credit balances in real-time. It runs quietly in your system tray and lets you keep track of your quotas even when VS Code is closed.
+
+> Need multiple accounts or providers? [**QuotaShift**](https://github.com/the-long-ride/QuotaShift/releases/latest) adds multiple-account switching and monitoring for **Antigravity, Codex and Claude**.
 
 ## 📸 Preview
 

@@ -23,13 +23,13 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 - **Resilient Quota Sources**: Quota checks use `agy CLI → direct Cloud Code → Antigravity language server`, automatically falling back when a source is unavailable. If `agy` is signed in, CLI-only users do not need a running Antigravity language server.
 - **Background Refresh on Windows**: Quota helper processes run without opening terminal or PowerShell windows.
 - **Active Model Monitoring**: Displays the remaining quota of your selected Gemini model directly in the status bar. If no model is explicitly set, it automatically defaults to the model with the highest remaining quota.
-- **Rich Hover Tooltip**: Hover for a detailed, borderless HTML breakdown of your subscription tier, remaining AI credits, and model reset times. The active model is highlighted with bold text and a pulse icon **$(pulse)$**.
+- **Rich Hover Tooltip**: Hover for a detailed, compact, borderless HTML breakdown of your subscription tier, remaining AI credits, and model reset times. The active model is highlighted with bold text and a pulse icon **$(pulse)$**.
 - **Clean Workspace**: Minimize status bar clutter by clicking "Minimize monitor" in the tooltip to replace the full quota text with a simple `$(credit-card) Quotas` display. Restore it anytime with "Display monitor".
 - **Customizable Intervals**: Adjust the quota refresh rate on-the-fly directly from the tooltip settings prompt.
 - **One-Click QuickPick**: Click the status bar item to instantly force a refresh and view all models in a clean, searchable QuickPick dropdown. Select any model from the list to update the monitored model.
 
 ### 🖥️ Standalone Desktop Tray Application
-The project now includes a **Tauri-powered standalone desktop tray application** to keep track of your quotas even when VS Code is closed.
+The project includes a **Tauri-powered standalone desktop tray application** to keep track of the current Antigravity login even when VS Code is closed.
 
 ![Desktop App Preview](assets/demo-pics/Desktop-app-tray-click.png)
 
@@ -41,6 +41,8 @@ The project now includes a **Tauri-powered standalone desktop tray application**
   - Custom refresh poll rate (in seconds).
   - Clean light/dark mode theme toggling.
   - Auto-updates directly from GitHub Releases.
+
+> Need more than the current Antigravity login? [**QuotaShift**](https://github.com/the-long-ride/QuotaShift/releases/latest) adds multiple-account switching and monitoring for **Antigravity, Codex and Claude**.
 
 ### 📦 Installation
 
