@@ -13,6 +13,9 @@ All notable changes to this project will be documented in this file.
 - **Narrower Hover Panel**: Tightened quota-table spacing and progress bars so the status-bar hover panel stays compact while keeping the refresh/model-selection hint on one line.
 - **Updated Hover Preview**: Refreshed the README hover screenshot to match the v1.3.1 tooltip and QuotaShift tip.
 
+### Fixed
+- **Silent Windows Refresh**: Language-server discovery now launches PowerShell directly with no intermediate command shell, in hidden non-interactive mode, preventing refreshes from flashing terminal windows.
+
 ## [1.3.0] - 2026-09-04
 
 ### Added

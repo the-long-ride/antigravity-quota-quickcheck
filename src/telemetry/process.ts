@@ -1,8 +1,18 @@
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { platform } from 'os';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+async function execHiddenPowerShell(script: string, timeout: number): Promise<string> {
+    const { stdout } = await execFileAsync(
+        'powershell.exe',
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script],
+        { timeout, windowsHide: true }
+    );
+    return stdout;
+}
 
 export async function locateAntigravityBeacon(): Promise<{ pid: number; token: string } | null> {
     const os = platform();
@@ -10,13 +20,12 @@ export async function locateAntigravityBeacon(): Promise<{ pid: number; token: s
 
     try {
         if (os === 'win32') {
-            const { stdout } = await execAsync(
-                'powershell -NoProfile -Command "Get-CimInstance Win32_Process | ' +
-                'Where-Object {$_.Name -like \'*language_server*\'} | ' +
-                'Select-Object ProcessId,CommandLine | ConvertTo-Json"',
-                { timeout: 8000, windowsHide: true }
+            output = await execHiddenPowerShell(
+                "Get-CimInstance Win32_Process | " +
+                "Where-Object {$_.Name -like '*language_server*'} | " +
+                "Select-Object ProcessId,CommandLine | ConvertTo-Json",
+                8000
             );
-            output = stdout;
         } else {
             const { stdout } = await execAsync(
                 'ps -axo pid,args | grep -i language_server | grep -v grep',
@@ -73,11 +82,10 @@ export async function detectActivePort(pid: number): Promise<number | null> {
 
     try {
         if (os === 'win32') {
-            const { stdout } = await execAsync(
-                `powershell -NoProfile -Command "Get-NetTCPConnection -OwningProcess ${pid} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort"`,
-                { timeout: 5000, windowsHide: true }
+            output = await execHiddenPowerShell(
+                `Get-NetTCPConnection -OwningProcess ${pid} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort`,
+                5000
             );
-            output = stdout;
         } else if (os === 'darwin') {
             const { stdout } = await execAsync(
                 `lsof -iTCP -sTCP:LISTEN -a -p ${pid} -Fn 2>/dev/null | grep '^n' | sed 's/n\\*://'`,
