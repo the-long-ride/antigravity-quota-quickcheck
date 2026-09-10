@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-10
+
+### Added
+- **QuotaShift Discovery**: Added links from the extension tooltip, desktop app, and documentation to QuotaShift for users who need multiple-account switching and monitoring across Antigravity, Codex, and Claude.
+
+### Changed
+- **Narrower Hover Panel**: Tightened quota-table spacing and progress bars so the status-bar hover panel stays compact while keeping the refresh/model-selection hint on one line.
+- **Updated Hover Preview**: Refreshed the README hover screenshot to match the v1.3.1 tooltip and QuotaShift tip.
+
+### Fixed
+- **Silent Windows Refresh**: Language-server discovery now launches PowerShell directly with no intermediate command shell, in hidden non-interactive mode, preventing refreshes from flashing terminal windows.
+
+## [1.3.0] - 2026-09-04
+
 ### Added
 - **Three-Layer Quota Fallback**: The VS Code extension and desktop app now prefer structured `agy` CLI usage, fall back to direct Cloud Code with the existing `agy` sign-in, and use the Antigravity language server as the final source.
 
