@@ -95,9 +95,9 @@ export function buildTooltip(
     md.appendMarkdown("</table>\n\n");
     md.appendMarkdown("---\n");
     md.appendMarkdown(
-      "💡 **Tip:** **[Desktop App](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest)** — current `Antigravity 2.0` login.<br/>" +
-      "**[QuotaShift](https://github.com/the-long-ride/QuotaShift/releases/latest)** — multiple-account switching & monitoring<br/>" +
-      "for Antigravity, Codex & Claude.\n\n",
+      "**Tip:** **[Desktop App](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest)** — best for 1 account with Antigravity CLI/ 2.0.<br/>" +
+      "**[QuotaShift](https://github.com/the-long-ride/QuotaShift/releases/latest)** — lightweight desktop app for multiple-account switching,<br/>" + 
+      "monitoring & pooling for Antigravity, Codex & Claude.\n\n",
     );
     md.appendMarkdown("---\n");
   }
