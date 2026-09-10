@@ -48,15 +48,16 @@ export function buildTooltip(
 
   // Per-model quota table
   if (status.quotas.length > 0) {
-    // HTML Table
-    md.appendMarkdown('<table border="0" cellspacing="0" cellpadding="4">\n');
+    // Keep this table just narrower than the one-line footer hint so the hint
+    // determines the tooltip's minimum useful width instead of the quota grid.
+    md.appendMarkdown('<table border="0" cellspacing="0" cellpadding="2">\n');
     md.appendMarkdown(
       "<tr><th>Model</th><th>Limits &amp; Remaining</th><th>Resets at</th></tr>\n",
     );
 
     for (const q of status.quotas) {
-      const fiveHourBar = buildBar(q.fiveHourPercent, 6);
-      const weeklyBar = buildBar(q.weeklyPercent, 6);
+      const fiveHourBar = buildBar(q.fiveHourPercent, 5);
+      const weeklyBar = buildBar(q.weeklyPercent, 5);
       const iconUri = getQuotaIconUri(q.fiveHourPercent, extensionUri);
       const isRecentlyUsed = q.model === status.recentlyUsedModel;
       const modelLabel = isRecentlyUsed
@@ -68,7 +69,7 @@ export function buildTooltip(
 
       md.appendMarkdown(
         `<tr>` +
-          `<td valign="middle"><img src="${iconUri.toString()}" width="14" align="center" /> &nbsp;${modelLabel}</td>` +
+          `<td valign="middle"><img src="${iconUri.toString()}" width="14" align="center" />&nbsp;${modelLabel}</td>` +
           `<td>` +
             `<table border="0" cellspacing="0" cellpadding="0">` +
               `<tr>` +
@@ -93,10 +94,13 @@ export function buildTooltip(
 
     md.appendMarkdown("</table>\n\n");
     md.appendMarkdown("---\n");
-    md.appendMarkdown("💡 **Tip:** Track your quota easily anytime on your desktop using the standalone **[Desktop App](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest)** when using `Antigravity 2.0`.\n\n");
+    md.appendMarkdown(
+      "💡 **Tip:** **[Desktop App](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest)** — current `Antigravity 2.0` login.<br/>" +
+      "**[QuotaShift](https://github.com/the-long-ride/QuotaShift/releases/latest)** — multiple-account switching & monitoring<br/>" +
+      "for Antigravity, Codex & Claude.\n\n",
+    );
     md.appendMarkdown("---\n");
   }
-
 
   // Hint footer
   const settingsBtn = `<a href="command:${COMMANDS.SET_INTERVAL}" title="${UI_TEXT.SET_INTERVAL_TOOLTIP}">${UI_TEXT.SET_INTERVAL_LABEL}</a>`;

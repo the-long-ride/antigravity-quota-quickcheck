@@ -291,6 +291,10 @@ document.getElementById("github-link")!.addEventListener("click", (e) => {
   e.preventDefault();
   openUrl("https://github.com/the-long-ride/antigravity-quota-quickcheck");
 });
+document.getElementById("quotashift-link")!.addEventListener("click", (e) => {
+  e.preventDefault();
+  openUrl("https://github.com/the-long-ride/QuotaShift/releases/latest");
+});
 document.getElementById("report-issue-link")!.addEventListener("click", (e) => {
   e.preventDefault();
   openUrl("https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new");
