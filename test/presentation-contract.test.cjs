@@ -114,7 +114,7 @@ test('desktop app buttons and hyperlinks use floating tooltips with edge clampin
   const sandbox = { Math };
   vm.createContext(sandbox);
 
-  const rawFn = tooltipTs.match(/export function calculateTooltipPosition[\s\S]*?return \{\s*left:\s*Math\.round\(left\),\s*top:\s*Math\.round\(top\),\s*placement,\s*\};\n\}/)[0];
+  const rawFn = tooltipTs.match(/export function calculateTooltipPosition[\s\S]*?return \{\s*left:\s*Math\.round\(left\),\s*top:\s*Math\.round\(top\),\s*placement,\s*\};\r?\n\}/)[0];
   const jsFn = rawFn
     .replace('export ', '')
     .replace(/targetRect:\s*RectLike/, 'targetRect')
@@ -221,7 +221,7 @@ test('desktop app dynamically resizes panel height according to available quota 
   const vm = require('node:vm');
   const sandbox = { Math };
   vm.createContext(sandbox);
-  const rawFn = mainTs.match(/function calculateWindowHeight[\s\S]*?return Math\.max\(216, Math\.min\(650, baseHeight \+ cardsTotal \+ 15\)\);\n\}/)[0];
+  const rawFn = mainTs.match(/function calculateWindowHeight[\s\S]*?return Math\.max\(216, Math\.min\(650, baseHeight \+ cardsTotal \+ 15\)\);\r?\n\}/)[0];
   const jsFn = rawFn.replace(/:\s*[a-zA-Z]+/g, '');
   vm.runInContext(jsFn, sandbox);
   const calc = sandbox.calculateWindowHeight;
@@ -275,7 +275,7 @@ test('desktop app colors usage bar and value dark orange for 11-20% and dark red
   const sandbox = {};
   vm.createContext(sandbox);
 
-  const rawFn = mainTs.match(/export function getQuotaUsageTier[\s\S]*?return "normal";\n\}/)[0];
+  const rawFn = mainTs.match(/export function getQuotaUsageTier[\s\S]*?\r?\n\}/)[0];
   const jsFn = rawFn
     .replace('export ', '')
     .replace(/:\s*number\s*\|\s*undefined/, '')
