@@ -2,18 +2,91 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getVersion } from "@tauri-apps/api/app";
+import { initFloatingTooltips } from "./tooltip";
 
 // Interfaces matching Rust structs
-interface QuotaData {
+export interface QuotaData {
   model: string;
   percent: number;
   refreshTime: string;
-  fiveHourPercent: number;
-  fiveHourReset: string;
-  fiveHourDisabled: boolean;
-  weeklyPercent: number;
-  weeklyReset: string;
-  weeklyDisabled: boolean;
+  fiveHourPercent?: number;
+  fiveHourReset?: string;
+  fiveHourDisabled?: boolean;
+  weeklyPercent?: number;
+  weeklyReset?: string;
+  weeklyDisabled?: boolean;
+}
+
+export function isArgonPoolModel(model: string | null | undefined): boolean {
+  if (!model) return false;
+  const lower = model.toLowerCase();
+  return (
+    lower.includes("argon") ||
+    lower.includes("gemini-4") ||
+    lower.includes("gemini_4") ||
+    lower.includes("gemini 4")
+  );
+}
+
+export function isGeminiOnlyPool(quotas: { model: string }[]): boolean {
+  return (
+    quotas.length === 1 &&
+    /gemini/i.test(quotas[0].model) &&
+    !isArgonPoolModel(quotas[0].model)
+  );
+}
+
+export function getQuotaUsageTier(
+  percent: number | undefined,
+  disabled?: boolean
+): "normal" | "warning" | "danger" {
+  if (disabled || percent === undefined) {
+    return "normal";
+  }
+  if (percent <= 10) {
+    return "danger";
+  }
+  if (percent <= 20) {
+    return "warning";
+  }
+  return "normal";
+}
+
+export function getQuotaLevelClass(
+  percent: number | undefined,
+  disabled?: boolean
+): string {
+  const tier = getQuotaUsageTier(percent, disabled);
+  if (tier === "warning") {
+    return "quota-level--warning";
+  }
+  if (tier === "danger") {
+    return "quota-level--danger";
+  }
+  return "";
+}
+
+export function calculateWindowHeight(quotaCount: number, isGeminiOnly: boolean): number {
+  if (quotaCount <= 0) {
+    return 216;
+  }
+  if (quotaCount === 1 && isGeminiOnly) {
+    return 224;
+  }
+  const baseHeight = 192;
+  const cardsTotal = quotaCount * 85 + Math.max(0, quotaCount - 1) * 4;
+  return Math.max(216, Math.min(650, baseHeight + cardsTotal + 15));
+}
+
+let lastRequestedHeight = 0;
+
+export function adjustWindowHeight(quotaCount: number, isGeminiOnly: boolean) {
+  const target = calculateWindowHeight(quotaCount, isGeminiOnly);
+  if (target === lastRequestedHeight) {
+    return;
+  }
+  lastRequestedHeight = target;
+  invoke("set_window_height", { height: target }).catch(() => {});
 }
 
 interface CreditInfo {
@@ -135,7 +208,7 @@ function formatAbsoluteTime(isoDate: string): string {
     futureDate.getFullYear() === now.getFullYear();
 
   if (isCurrentDay) {
-    return `Resets at: ${timeStr}`;
+    return timeStr;
   }
 
   const MONTHS = [
@@ -144,7 +217,7 @@ function formatAbsoluteTime(isoDate: string): string {
   ];
   const month = MONTHS[futureDate.getMonth()];
   const day = futureDate.getDate();
-  return `Resets at: ${month} ${day}, ${timeStr}`;
+  return `${month} ${day}, ${timeStr}`;
 }
 
 function updateUI(status: FullStatus | null) {
@@ -161,6 +234,7 @@ function updateUI(status: FullStatus | null) {
         </p>
       </div>
     `;
+    adjustWindowHeight(0, false);
     return;
   }
 
@@ -177,25 +251,58 @@ function updateUI(status: FullStatus | null) {
   } else {
     creditAmount.textContent = "—";
   }
-  if (status.quotas.length === 0) {
+  const validQuotas = (status.quotas || []).filter(
+    (q): q is QuotaData => Boolean(q && typeof q === "object")
+  );
+
+  if (validQuotas.length === 0) {
     quotasList.innerHTML = `
       <div class="loading-state">
         <span>No active model quotas found.</span>
       </div>
     `;
+    adjustWindowHeight(0, false);
     return;
   }
 
+  const isGeminiOnly = isGeminiOnlyPool(validQuotas);
+
   quotasList.innerHTML = "";
-  status.quotas.forEach((q) => {
+  validQuotas.forEach((q) => {
     const isMonitored = q.model === status.recentlyUsedModel;
-    const availablePercents = [
-      q.fiveHourDisabled ? null : q.fiveHourPercent,
-      q.weeklyDisabled ? null : q.weeklyPercent,
-    ].filter((value): value is number => value !== null);
-    const isDisabled = availablePercents.length > 0 && availablePercents.every((value) => value === 0);
+    const isArgon = isArgonPoolModel(q.model);
+
+    const fiveHourDisabled = Boolean(q.fiveHourDisabled);
+    const weeklyDisabled = Boolean(q.weeklyDisabled);
+
+    const availablePercents = isArgon
+      ? (weeklyDisabled || q.weeklyPercent === undefined ? [] : [q.weeklyPercent])
+      : [
+          fiveHourDisabled || q.fiveHourPercent === undefined ? null : q.fiveHourPercent,
+          weeklyDisabled || q.weeklyPercent === undefined ? null : q.weeklyPercent,
+        ].filter((value): value is number => value !== null);
+
+    const isDisabled = isArgon
+      ? weeklyDisabled || (q.weeklyPercent !== undefined && q.weeklyPercent === 0)
+      : (q.fiveHourPercent !== undefined ? fiveHourDisabled || q.fiveHourPercent === 0 : false) ||
+        (availablePercents.length > 0 && availablePercents.every((value) => value === 0));
+
+    const itemClasses = [
+      "quota-item",
+      isArgon ? "quota-item--argon" : "",
+      isGeminiOnly ? "quota-item--gemini-only" : "",
+      isMonitored ? "monitored" : "",
+      isDisabled ? "disabled-model" : "",
+    ].filter(Boolean).join(" ");
+
+    const modelDisplayName = (q.model && q.model.trim()) ? q.model : "Gemini";
+
     const itemEl = document.createElement("div");
-    itemEl.className = `quota-item ${isMonitored ? "monitored" : ""} ${isDisabled ? "disabled-model" : ""}`;
+    itemEl.className = itemClasses;
+    itemEl.setAttribute("data-model", modelDisplayName);
+    if (isGeminiOnly) {
+      itemEl.setAttribute("data-tooltip", modelDisplayName);
+    }
 
     itemEl.addEventListener("click", async () => {
       if (isDisabled) {
@@ -205,26 +312,65 @@ function updateUI(status: FullStatus | null) {
         }
         return;
       }
-      await invoke("set_monitored_model", { model: q.model });
+      await invoke("set_monitored_model", { model: modelDisplayName });
       triggerRefresh();
     });
 
-    const fiveHourResetStr = q.fiveHourDisabled
+    const fiveHourResetStr = fiveHourDisabled
       ? "Unavailable"
       : (q.fiveHourReset ? formatAbsoluteTime(q.fiveHourReset) : "Ready");
-    const weeklyResetStr = q.weeklyDisabled
+    const weeklyResetStr = weeklyDisabled
       ? "Unavailable"
       : (q.weeklyReset ? formatAbsoluteTime(q.weeklyReset) : "Ready");
-    const fiveHourValue = q.fiveHourDisabled ? "—" : `${q.fiveHourPercent}%`;
-    const weeklyValue = q.weeklyDisabled ? "—" : `${q.weeklyPercent}%`;
-    const fiveHourWidth = q.fiveHourDisabled ? 0 : q.fiveHourPercent;
-    const weeklyWidth = q.weeklyDisabled ? 0 : q.weeklyPercent;
 
-    itemEl.innerHTML = `
+    const fiveHourValue = (fiveHourDisabled || q.fiveHourPercent === undefined)
+      ? "—"
+      : `${q.fiveHourPercent}%`;
+    const weeklyValue = (weeklyDisabled || q.weeklyPercent === undefined)
+      ? "—"
+      : `${q.weeklyPercent}%`;
+
+    const fiveHourWidth = (fiveHourDisabled || q.fiveHourPercent === undefined)
+      ? 0
+      : Math.min(100, Math.max(0, q.fiveHourPercent));
+    const weeklyWidth = (weeklyDisabled || q.weeklyPercent === undefined)
+      ? 0
+      : Math.min(100, Math.max(0, q.weeklyPercent));
+
+    const fiveHourLevelClass = getQuotaLevelClass(q.fiveHourPercent, fiveHourDisabled);
+    const weeklyLevelClass = getQuotaLevelClass(q.weeklyPercent, weeklyDisabled);
+
+    const fiveHourBarClass = ["progress-bar", fiveHourLevelClass].filter(Boolean).join(" ");
+    const fiveHourValueClass = ["quota-value", fiveHourLevelClass].filter(Boolean).join(" ");
+    const weeklyBarClass = ["progress-bar", weeklyLevelClass].filter(Boolean).join(" ");
+    const weeklyValueClass = ["quota-value", weeklyLevelClass].filter(Boolean).join(" ");
+
+    const headerHtml = isGeminiOnly
+      ? ""
+      : `
       <div class="quota-item-header">
-        <span class="quota-model-name">${q.model}</span>
+        <span class="quota-model-name">${modelDisplayName}</span>
       </div>
+    `;
 
+    const limitsHtml = isArgon
+      ? `
+      <div class="quota-limits-container">
+        <div class="quota-limit-col">
+          <div class="quota-limit-label-container">
+            <span class="quota-limit-name">Weekly limit</span>
+            <span class="quota-limit-reset">${weeklyResetStr}</span>
+          </div>
+          <div class="quota-limit-bar-container">
+            <div class="progress-container">
+              <div class="${weeklyBarClass}" style="width: ${weeklyWidth}%;"></div>
+            </div>
+            <span class="${weeklyValueClass}">${weeklyValue}</span>
+          </div>
+        </div>
+      </div>
+    `
+      : `
       <div class="quota-limits-container">
         <div class="quota-limit-col">
           <div class="quota-limit-label-container">
@@ -233,9 +379,9 @@ function updateUI(status: FullStatus | null) {
           </div>
           <div class="quota-limit-bar-container">
             <div class="progress-container">
-              <div class="progress-bar" style="width: ${fiveHourWidth}%;"></div>
+              <div class="${fiveHourBarClass}" style="width: ${fiveHourWidth}%;"></div>
             </div>
-            <span class="quota-value">${fiveHourValue}</span>
+            <span class="${fiveHourValueClass}">${fiveHourValue}</span>
           </div>
         </div>
 
@@ -246,15 +392,21 @@ function updateUI(status: FullStatus | null) {
           </div>
           <div class="quota-limit-bar-container">
             <div class="progress-container">
-              <div class="progress-bar" style="width: ${weeklyWidth}%;"></div>
+              <div class="${weeklyBarClass}" style="width: ${weeklyWidth}%;"></div>
             </div>
-            <span class="quota-value">${weeklyValue}</span>
+            <span class="${weeklyValueClass}">${weeklyValue}</span>
           </div>
         </div>
       </div>
     `;
+
+    itemEl.innerHTML = `
+      ${headerHtml}
+      ${limitsHtml}
+    `;
     quotasList.appendChild(itemEl);
   });
+  adjustWindowHeight(validQuotas.length, isGeminiOnly);
 }
 
 async function triggerRefresh() {
@@ -300,6 +452,27 @@ document.getElementById("report-issue-link")!.addEventListener("click", (e) => {
   openUrl("https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new");
 });
 
+const appVersionLink = document.getElementById("app-version-link");
+if (appVersionLink) {
+  appVersionLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    openUrl("https://github.com/the-long-ride/antigravity-quota-quickcheck/blob/main/CHANGELOG.md");
+  });
+}
+
+async function initAppVersion() {
+  const versionEl = document.getElementById("app-version-link");
+  if (!versionEl) return;
+  try {
+    const ver = await invoke<string>("get_app_version").catch(() => getVersion());
+    if (ver) {
+      versionEl.textContent = ver.startsWith("v") ? ver : `v${ver}`;
+    }
+  } catch (err) {
+    console.debug("Failed to get version dynamically, using fallback:", err);
+  }
+}
+
 async function checkForUpdates() {
   try {
     const currentVersion = await getVersion();
@@ -331,16 +504,19 @@ async function checkForUpdates() {
 
       if (downloadUrl) {
         updateBtn.style.display = "flex";
-        updateBtn.title = `New version ${latestTag} is available. Click to update.`;
+        updateBtn.setAttribute("data-tooltip", `New version ${latestTag} is available. Click to update.`);
+        updateBtn.removeAttribute("title");
 
         updateBtn.addEventListener("click", async () => {
           const confirmUpdate = await showCustomConfirm(`A new version (${latestTag}) of Antigravity Quota Quickcheck is available. Do you want to download and install it now?`);
           if (confirmUpdate) {
             updateBtn.classList.add("downloading");
-            updateBtn.title = "Downloading update...";
+            updateBtn.setAttribute("data-tooltip", "Downloading update...");
+            updateBtn.removeAttribute("title");
             invoke("execute_update", { url: downloadUrl }).catch(async (err) => {
               updateBtn.classList.remove("downloading");
-              updateBtn.title = `Update failed: ${err}`;
+              updateBtn.setAttribute("data-tooltip", `Update failed: ${err}`);
+              updateBtn.removeAttribute("title");
               await showCustomAlert(`Update failed: ${err}`);
             });
           }
@@ -414,6 +590,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener("focus", () => {
     scrollToActiveModel();
   });
+
+  adjustWindowHeight(0, false);
+  initAppVersion();
+  initFloatingTooltips();
 
   try {
     const initialStatus = await invoke<FullStatus | null>("get_quota_status");
