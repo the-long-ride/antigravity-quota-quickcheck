@@ -1,99 +1,162 @@
 import * as vscode from "vscode";
-import { fetchFullStatus, formatAbsoluteTime, resolveQuotaModelName } from "../telemetry";
+import { FullStatus, fetchFullStatus, formatAbsoluteTime, resolveQuotaModelName } from "../telemetry";
 import { buildBar, getQuotaIconUri, formatNumber } from "./helpers";
+import { getLastStatus, setLastStatus, applyStatusToItem, updateStatusBarSync } from "./statusBar";
 
-export async function showQuotaPopup(extensionUri: vscode.Uri): Promise<void> {
-  try {
-    const status = await fetchFullStatus();
-    const quotaData = status.quotas;
+export interface ModelQuickPickItem extends vscode.QuickPickItem {
+  modelName?: string;
+}
 
-    if (quotaData.length === 0) {
-      vscode.window.showInformationMessage("No models or quota data found.");
-      return;
-    }
+export function buildQuickPickItems(
+  status: FullStatus,
+  extensionUri: vscode.Uri,
+): ModelQuickPickItem[] {
+  const quotaData = status.quotas;
+  const creditBalance = status.credits?.balance ?? null;
+  const creditLabel =
+    creditBalance !== null
+      ? `$(credit-card)  Remaining AI Credits: ${formatNumber(creditBalance)}`
+      : `$(credit-card)  Remaining AI Credits: —`;
 
-    const creditBalance = status.credits?.balance ?? null;
-    const creditLabel =
-      creditBalance !== null
-        ? `$(credit-card)  Remaining AI Credits: ${formatNumber(creditBalance)}`
-        : `$(credit-card)  Remaining AI Credits: unavailable`;
+  const separator: ModelQuickPickItem = {
+    label: "",
+    kind: vscode.QuickPickItemKind.Separator,
+  };
 
-    const quickPick = vscode.window.createQuickPick();
-    quickPick.title = "Antigravity Quota — Live";
-    quickPick.placeholder = "Select a model to monitor in the status bar";
+  const creditItem: ModelQuickPickItem = {
+    label: creditLabel,
+    alwaysShow: true,
+  };
 
-    const separator: vscode.QuickPickItem = {
-      label: "",
-      kind: vscode.QuickPickItemKind.Separator,
-    };
+  const monitoredModel = vscode.workspace
+    .getConfiguration("antigravity-quota")
+    .get<string>("monitoredModel");
 
-    const creditItem: vscode.QuickPickItem = {
-      label: creditLabel,
+  let activeModel = resolveQuotaModelName(monitoredModel);
+  if (quotaData.length > 0 && !quotaData.some((q) => q.model === activeModel)) {
+    activeModel = quotaData[0].model;
+  }
+
+  const modelItems: ModelQuickPickItem[] = quotaData.map((item) => {
+    const isMonitored = item.model === activeModel;
+    const fiveHourResetStr = item.fiveHourPercent === undefined ? "" : (item.fiveHourDisabled ? "Disabled" : (item.fiveHourReset ? formatAbsoluteTime(item.fiveHourReset) : "Ready"));
+    const weeklyResetStr = item.weeklyDisabled ? "Disabled" : (item.weeklyReset ? formatAbsoluteTime(item.weeklyReset) : "Ready");
+
+    const fiveHourPart =
+      item.fiveHourPercent === undefined
+        ? null
+        : `5h ${item.fiveHourDisabled ? "—" : `${item.fiveHourPercent}%`} - ${fiveHourResetStr}`;
+
+    const weeklyPart =
+      item.weeklyPercent === undefined
+        ? null
+        : `7d ${item.weeklyDisabled ? "—" : `${item.weeklyPercent}%`} - ${weeklyResetStr}`;
+
+    const detailText =
+      fiveHourPart && weeklyPart
+        ? `${fiveHourPart} // ${weeklyPart}`
+        : (fiveHourPart || weeklyPart || `Quota ${item.percent}% - ${item.refreshTime}`);
+
+    const detail = `$(clock) ${detailText}`;
+
+    return {
+      label: `${isMonitored ? "$(check) $(pulse) " : "   "}${item.model}`,
+      modelName: item.model,
+      detail,
+      iconPath: getQuotaIconUri(item.fiveHourPercent ?? item.percent, extensionUri),
       alwaysShow: true,
     };
+  });
 
-    const monitoredModel = vscode.workspace
-      .getConfiguration("antigravity-quota")
-      .get<string>("monitoredModel");
+  const desktopSeparator: ModelQuickPickItem = {
+    label: "",
+    kind: vscode.QuickPickItemKind.Separator,
+  };
 
-    let activeModel = resolveQuotaModelName(monitoredModel);
-    if (quotaData.length > 0 && !quotaData.some((q) => q.model === activeModel)) {
-      activeModel = quotaData[0].model;
-    }
+  const desktopAppItem: ModelQuickPickItem = {
+    label: "Get Desktop App",
+    description: "Track your quota anytime on desktop (especially when using Antigravity 2.0)",
+    iconPath: {
+      light: vscode.Uri.joinPath(extensionUri, "assets", "icons", "desktop-light.svg"),
+      dark: vscode.Uri.joinPath(extensionUri, "assets", "icons", "desktop-dark.svg"),
+    },
+    alwaysShow: true,
+  };
 
-    interface ModelQuickPickItem extends vscode.QuickPickItem {
-      modelName?: string;
-    }
+  const quotaShiftItem: ModelQuickPickItem = {
+    label: "Get QuotaShift",
+    description: "Lightweight desktop app for multiple-account switching, monitoring & pooling",
+    iconPath: new vscode.ThemeIcon("organization"),
+    alwaysShow: true,
+  };
 
-    const modelItems: ModelQuickPickItem[] = quotaData.map((item) => {
-      const isMonitored = item.model === activeModel;
-      const fiveHourResetStr = item.fiveHourDisabled ? "Disabled" : (item.fiveHourReset ? formatAbsoluteTime(item.fiveHourReset) : "Ready");
-      const weeklyResetStr = item.weeklyDisabled ? "Disabled" : (item.weeklyReset ? formatAbsoluteTime(item.weeklyReset) : "Ready");
+  return [creditItem, separator, ...modelItems, desktopSeparator, desktopAppItem, quotaShiftItem];
+}
 
-      return {
-        label: `${isMonitored ? "$(check) " : "   "}${item.model}`,
-        modelName: item.model,
-        description: `5 hrs limit: ${item.fiveHourPercent}% | Weekly limit: ${item.weeklyPercent}%`,
-        detail: `$(clock) 5 hrs limit Reset: ${fiveHourResetStr}  •  Weekly limit Reset: ${weeklyResetStr}`,
-        iconPath: getQuotaIconUri(item.fiveHourPercent, extensionUri),
+export function showQuotaPopup(
+  extensionUri: vscode.Uri,
+  statusBarItem?: vscode.StatusBarItem,
+): void {
+  const quickPick = vscode.window.createQuickPick<ModelQuickPickItem>();
+  quickPick.title = "Antigravity Quota — Live";
+  quickPick.placeholder = "Select a model to monitor in the status bar";
+
+  const cachedStatus = getLastStatus();
+  if (cachedStatus && cachedStatus.quotas.length > 0) {
+    quickPick.items = buildQuickPickItems(cachedStatus, extensionUri);
+  } else {
+    quickPick.items = [
+      {
+        label: "$(sync~spin)  Refreshing real-time quotas...",
         alwaysShow: true,
-      };
-    });
+      },
+    ];
+  }
 
+  quickPick.busy = true;
+  quickPick.show();
 
-    const desktopSeparator: vscode.QuickPickItem = {
-      label: "",
-      kind: vscode.QuickPickItemKind.Separator,
-    };
-
-    const desktopAppItem: ModelQuickPickItem = {
-      label: "$(desktop-preserve)  Get Desktop App",
-      description: "Track your quota anytime on desktop (especially when using Antigravity 2.0)",
-      alwaysShow: true,
-    };
-
-    quickPick.items = [creditItem, separator, ...modelItems, desktopSeparator, desktopAppItem];
-
-    quickPick.onDidAccept(async () => {
-      const selected = quickPick.selectedItems[0] as ModelQuickPickItem;
-      if (selected) {
-        if (selected.label.includes("Get Desktop App")) {
-          vscode.env.openExternal(vscode.Uri.parse("https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest"));
-        } else if (selected.modelName) {
-          const config = vscode.workspace.getConfiguration("antigravity-quota");
-          await config.update(
-            "monitoredModel",
-            selected.modelName,
-            vscode.ConfigurationTarget.Global,
-          );
+  quickPick.onDidAccept(async () => {
+    const selected = quickPick.selectedItems[0];
+    if (selected) {
+      if (selected.label.includes("Get Desktop App")) {
+        vscode.env.openExternal(vscode.Uri.parse("https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest"));
+      } else if (selected.label.includes("QuotaShift")) {
+        vscode.env.openExternal(vscode.Uri.parse("https://github.com/the-long-ride/QuotaShift/releases/latest"));
+      } else if (selected.modelName) {
+        const config = vscode.workspace.getConfiguration("antigravity-quota");
+        await config.update(
+          "monitoredModel",
+          selected.modelName,
+          vscode.ConfigurationTarget.Global,
+        );
+        if (statusBarItem) {
+          updateStatusBarSync(statusBarItem, extensionUri);
         }
       }
-      quickPick.hide();
+    }
+    quickPick.hide();
+  });
+
+  // Background refresh: immediately updates QuickPick and status bar when fetch completes
+  fetchFullStatus(true)
+    .then((freshStatus) => {
+      setLastStatus(freshStatus);
+      if (statusBarItem) {
+        applyStatusToItem(statusBarItem, freshStatus, extensionUri);
+      }
+      quickPick.items = buildQuickPickItems(freshStatus, extensionUri);
+      quickPick.busy = false;
+    })
+    .catch((err) => {
+      quickPick.busy = false;
+      if (!cachedStatus || cachedStatus.quotas.length === 0) {
+        quickPick.items = [
+          {
+            label: `$(error) Failed to refresh quota: ${err?.message || "Unavailable"}`,
+            alwaysShow: true,
+          },
+        ];
+      }
     });
-    quickPick.show();
-  } catch (err: any) {
-    vscode.window.showErrorMessage(
-      `Failed to load Antigravity Quota: ${err.message}`,
-    );
-  }
 }
