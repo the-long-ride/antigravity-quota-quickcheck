@@ -42,18 +42,18 @@ pub struct QuotaData {
     pub percent: u32,
     #[serde(rename = "refreshTime")]
     pub refresh_time: String,
-    #[serde(rename = "fiveHourPercent")]
-    pub five_hour_percent: u32,
-    #[serde(rename = "fiveHourReset")]
-    pub five_hour_reset: String,
-    #[serde(rename = "fiveHourDisabled")]
-    pub five_hour_disabled: bool,
-    #[serde(rename = "weeklyPercent")]
-    pub weekly_percent: u32,
-    #[serde(rename = "weeklyReset")]
-    pub weekly_reset: String,
-    #[serde(rename = "weeklyDisabled")]
-    pub weekly_disabled: bool,
+    #[serde(rename = "fiveHourPercent", default)]
+    pub five_hour_percent: Option<u32>,
+    #[serde(rename = "fiveHourReset", default)]
+    pub five_hour_reset: Option<String>,
+    #[serde(rename = "fiveHourDisabled", default)]
+    pub five_hour_disabled: Option<bool>,
+    #[serde(rename = "weeklyPercent", default)]
+    pub weekly_percent: Option<u32>,
+    #[serde(rename = "weeklyReset", default)]
+    pub weekly_reset: Option<String>,
+    #[serde(rename = "weeklyDisabled", default)]
+    pub weekly_disabled: Option<bool>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -77,6 +77,7 @@ struct AppState {
     last_status: Option<FullStatus>,
     monitored_model: Option<String>,
     poll_interval_secs: u64,
+    current_height: Option<u32>,
 }
 
 static STATE: OnceLock<Mutex<AppState>> = OnceLock::new();
@@ -87,6 +88,7 @@ fn get_state() -> &'static Mutex<AppState> {
             last_status: None,
             monitored_model: None,
             poll_interval_secs: 30,
+            current_height: None,
         })
     })
 }
@@ -113,8 +115,20 @@ fn set_poll_interval(seconds: u64) {
 }
 
 #[tauri::command]
+fn set_window_height(window: tauri::WebviewWindow, height: u32) {
+    let clamped = height.clamp(180, 800);
+    get_state().lock().unwrap().current_height = Some(clamped);
+    position_window(&window);
+}
+
+#[tauri::command]
 fn is_debug() -> bool {
     cfg!(debug_assertions)
+}
+
+#[tauri::command]
+fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
 }
 
 #[tauri::command]
@@ -199,12 +213,20 @@ fn format_tooltip(status: &FullStatus) -> String {
         .or_else(|| status.quotas.first());
 
     match active_quota {
-        Some(quota) => format!(
-            "{}\n{}\n{}",
-            quota.model,
-            format_window("5h", quota.five_hour_percent, quota.five_hour_disabled),
-            format_window("wk", quota.weekly_percent, quota.weekly_disabled),
-        ),
+        Some(quota) => {
+            let mut lines = vec![quota.model.clone()];
+            if let Some(five_h) = quota.five_hour_percent {
+                lines.push(format_window("5h", five_h, quota.five_hour_disabled.unwrap_or(false)));
+            }
+            if let Some(wk) = quota.weekly_percent {
+                lines.push(format_window("7d", wk, quota.weekly_disabled.unwrap_or(false)));
+            }
+            if lines.len() == 1 {
+                let pct = quota.five_hour_percent.or(quota.weekly_percent).unwrap_or(quota.percent);
+                lines.push(format_window("quota", pct, false));
+            }
+            lines.join("\n")
+        }
         None => {
             if let Some(credits) = &status.credits {
                 format!("Antigravity Quota Quickcheck\nAI credits: {:.2}", credits.balance)
@@ -238,19 +260,24 @@ async fn poll_and_update_tray(app_handle: &tauri::AppHandle) -> Result<(), Strin
 }
 
 fn position_window(window: &tauri::WebviewWindow) {
-    if let Ok(Some(monitor)) = window.primary_monitor() {
+    let monitor = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| window.primary_monitor().ok().flatten());
+
+    if let Some(monitor) = monitor {
         let monitor_size = monitor.size();
         let monitor_pos = monitor.position();
         let scale_factor = monitor.scale_factor();
-        let fallback_w = (680.0 * scale_factor) as u32;
-        let fallback_h = (380.0 * scale_factor) as u32;
-        let size = window
-            .outer_size()
-            .unwrap_or(tauri::PhysicalSize::new(fallback_w, fallback_h));
+        let target_h = get_state().lock().unwrap().current_height.unwrap_or(470) as f64;
+        let physical_w = (598.0 * scale_factor).round() as u32;
+        let physical_h = (target_h * scale_factor).round() as u32;
         let padding = (12.0 * scale_factor) as i32;
         let taskbar_h = (48.0 * scale_factor) as i32;
-        let x = monitor_pos.x + monitor_size.width as i32 - size.width as i32 - padding;
-        let y = monitor_pos.y + monitor_size.height as i32 - size.height as i32 - taskbar_h - padding;
+        let x = monitor_pos.x + monitor_size.width as i32 - physical_w as i32 - padding;
+        let y = monitor_pos.y + monitor_size.height as i32 - physical_h as i32 - taskbar_h - padding;
+        let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(physical_w, physical_h)));
         let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
     }
 }
@@ -322,7 +349,9 @@ pub fn run() {
             set_monitored_model,
             set_poll_interval,
             is_debug,
-            execute_update
+            get_app_version,
+            execute_update,
+            set_window_height
         ])
         .setup(|app| {
             let _ = setup_tray(app.handle());
@@ -364,4 +393,34 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_tooltip_uses_5h_and_7d_labels() {
+        let status = FullStatus {
+            credits: None,
+            plan_tier: Some("Google AI Pro".to_string()),
+            recently_used_model: Some("Claude & OpenAI".to_string()),
+            quotas: vec![QuotaData {
+                model: "Claude & OpenAI".to_string(),
+                percent: 85,
+                refresh_time: "Ready".to_string(),
+                five_hour_percent: Some(85),
+                five_hour_reset: None,
+                five_hour_disabled: Some(false),
+                weekly_percent: Some(50),
+                weekly_reset: None,
+                weekly_disabled: Some(false),
+            }],
+        };
+        let tooltip = format_tooltip(&status);
+        assert!(tooltip.contains("5h:"));
+        assert!(tooltip.contains("7d:"));
+        assert!(!tooltip.contains("wk:"));
+        assert!(!tooltip.contains("WK:"));
+    }
 }

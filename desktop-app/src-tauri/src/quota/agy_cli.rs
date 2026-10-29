@@ -26,6 +26,11 @@ struct ProviderWindows {
     weekly: WindowValue,
 }
 
+fn is_argon_group(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    lower.contains("argon") || lower.contains("gemini-4") || lower.contains("gemini_4") || lower.contains("gemini 4")
+}
+
 pub fn parse_quota_envelope(raw: &str) -> Result<FullStatus, ProviderError> {
     let root: Value = serde_json::from_str(raw)
         .map_err(|_| ProviderError::new(PROVIDER, ProviderErrorKind::InvalidData, "quota output was not valid JSON"))?;
@@ -40,6 +45,7 @@ pub fn parse_quota_envelope(raw: &str) -> Result<FullStatus, ProviderError> {
 
     let mut gemini = ProviderWindows::default();
     let mut shared = ProviderWindows::default();
+    let mut argon = ProviderWindows::default();
     let mut saw_recognized_group = false;
 
     for group in groups {
@@ -49,7 +55,11 @@ pub fn parse_quota_envelope(raw: &str) -> Result<FullStatus, ProviderError> {
             .and_then(Value::as_str)
             .unwrap_or("")
             .to_lowercase();
-        let target = if name.contains("gemini") {
+        let is_argon = is_argon_group(&name);
+        let target = if is_argon {
+            saw_recognized_group = true;
+            Some(&mut argon)
+        } else if name.contains("gemini") {
             saw_recognized_group = true;
             Some(&mut gemini)
         } else if name.contains("claude") || name.contains("gpt") || name.contains("openai") {
@@ -66,7 +76,7 @@ pub fn parse_quota_envelope(raw: &str) -> Result<FullStatus, ProviderError> {
             let reset = reset_time(bucket).unwrap_or_default();
             if is_five_hour_window(&window) {
                 assign_window(&mut target.five_hour, percent, reset);
-            } else if is_weekly_window(&window) {
+            } else if is_weekly_window(&window) || (is_argon && (window.is_empty() || window == "unknown")) {
                 assign_window(&mut target.weekly, percent, reset);
             }
         }
@@ -76,16 +86,32 @@ pub fn parse_quota_envelope(raw: &str) -> Result<FullStatus, ProviderError> {
         return Err(ProviderError::new(PROVIDER, ProviderErrorKind::InvalidData, "quota JSON contained no recognized provider groups"));
     }
 
-    let plan_tier = data
-        .get("planTier")
-        .or_else(|| data.get("plan_tier"))
-        .or_else(|| data.get("tier"))
-        .and_then(Value::as_str)
-        .map(str::to_string);
+    let plan_tier = super::extract_plan_tier(data);
+
+    let mut quotas = vec![build_card("Gemini", gemini)];
+    if argon.weekly.present || argon.five_hour.present {
+        let (percent, refresh_time) = if argon.weekly.present {
+            (argon.weekly.percent, argon.weekly.reset.clone())
+        } else {
+            (argon.five_hour.percent, argon.five_hour.reset.clone())
+        };
+        quotas.push(QuotaData {
+            model: "Gemini 4 Argon".to_string(),
+            percent,
+            refresh_time: if refresh_time.is_empty() { "Ready".to_string() } else { refresh_time.clone() },
+            five_hour_percent: None,
+            five_hour_reset: None,
+            five_hour_disabled: None,
+            weekly_percent: Some(percent),
+            weekly_reset: if refresh_time.is_empty() { None } else { Some(refresh_time) },
+            weekly_disabled: Some(false),
+        });
+    }
+    quotas.push(build_card("Claude & OpenAI", shared));
 
     let status = FullStatus {
         credits: None,
-        quotas: vec![build_card("Gemini", gemini), build_card("Claude & OpenAI", shared)],
+        quotas,
         plan_tier,
         recently_used_model: None,
     };
@@ -104,12 +130,12 @@ fn build_card(model: &str, windows: ProviderWindows) -> QuotaData {
         model: model.to_string(),
         percent,
         refresh_time,
-        five_hour_percent: windows.five_hour.percent,
-        five_hour_reset: windows.five_hour.reset,
-        five_hour_disabled: !windows.five_hour.present,
-        weekly_percent: windows.weekly.percent,
-        weekly_reset: windows.weekly.reset,
-        weekly_disabled: !windows.weekly.present,
+        five_hour_percent: Some(windows.five_hour.percent),
+        five_hour_reset: Some(windows.five_hour.reset),
+        five_hour_disabled: Some(!windows.five_hour.present),
+        weekly_percent: Some(windows.weekly.percent),
+        weekly_reset: Some(windows.weekly.reset),
+        weekly_disabled: Some(!windows.weekly.present),
     }
 }
 
