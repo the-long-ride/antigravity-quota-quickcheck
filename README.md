@@ -1,7 +1,8 @@
-# 💳 Google AI Quota Quickcheck
+# Google AI Quota Quickcheck
 
-[![Open VSX](https://img.shields.io/open-vsx/v/the-long-ride/antigravity-quota-quickcheck?color=blue&logo=open-vsx)](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Open VSX](https://img.shields.io/open-vsx/v/the-long-ride/antigravity-quota-quickcheck?color=black&logo=open-vsx&logoColor=white)](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
+[![Desktop Downloads](https://img.shields.io/github/downloads/the-long-ride/antigravity-quota-quickcheck/total?color=black&logo=github&logoColor=white&label=desktop%20downloads)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black)](https://opensource.org/licenses/MIT)
 
 > **One click. Zero distraction. Full control.**
 
@@ -9,17 +10,17 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 
 ---
 
-### ⚡ At a Glance
+### At a Glance
 - **Real-time Tracking**: Live updates for Gemini and other Google AI models.
 - **Visual Indicators**: Color-coded battery icons showing remaining capacity.
 - **Seamless UI**: Built natively for VS Code—no distraction, just information.
 
-### 📸 Preview
+### Preview
 | Hover for Detail | Click to view all Quotas & manual refresh usage |
 | :---: | :---: |
 | ![Hover Preview](assets/demo-pics/hover-on-status-bar-item.png) | ![Click Preview](assets/demo-pics/click-on-status-bar-item.png) |
 
-### 🚀 Key Features
+### Key Features
 - **Resilient Quota Sources**: Quota checks use `agy CLI → direct Cloud Code → Antigravity language server`, automatically falling back when a source is unavailable. If `agy` is signed in, CLI-only users do not need a running Antigravity language server.
 - **Background Refresh on Windows**: Quota helper processes run without opening terminal or PowerShell windows.
 - **Active Model Monitoring**: Displays the remaining quota of your selected Gemini model directly in the status bar. If no model is explicitly set, it automatically defaults to the model with the highest remaining quota.
@@ -28,10 +29,10 @@ Monitor your Google AI model quotas, credit balance and most recent used model d
 - **Customizable Intervals**: Adjust the quota refresh rate on-the-fly directly from the tooltip settings prompt.
 - **One-Click QuickPick**: Click the status bar item to instantly force a refresh and view all models in a clean, searchable QuickPick dropdown. Select any model from the list to update the monitored model.
 
-### 🖥️ Standalone Desktop Tray Application
+### Standalone Desktop Tray Application
 The project includes a **Tauri-powered standalone desktop tray application** to keep track of the current Antigravity login even when VS Code is closed.
 
-![Desktop App Preview](assets/demo-pics/Desktop-app-tray-click.png)
+![Desktop App Preview](https://raw.githubusercontent.com/the-long-ride/antigravity-quota-quickcheck/main/assets/demo-pics/Desktop-app-tray-click.png)
 
 - **System Tray Integration**: A clean tray icon with a tooltip showing remaining credits and active model quota.
 - **Floating Dashboard**: Click the tray icon to toggle a premium, lightweight, translucent overlay dashboard.
@@ -44,7 +45,7 @@ The project includes a **Tauri-powered standalone desktop tray application** to 
 
 > Need more than the current Antigravity login? [**QuotaShift**](https://github.com/the-long-ride/QuotaShift/releases/latest) adds multiple-account switching and monitoring for **Antigravity, Codex and Claude**.
 
-### 📦 Installation
+### Installation
 
 #### VS Code Extension
 - **Marketplace**: Install via [Open VSX Registry](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
@@ -53,11 +54,6 @@ The project includes a **Tauri-powered standalone desktop tray application** to 
 #### Standalone Desktop App
 - **Windows**: Download the [installer (*setup.exe)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) or the [portable executable (*portable.exe)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) from the [latest GitHub release](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest).
 - **Linux**: Download the [.deb package](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) from the [latest GitHub release](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest).
-
----
-
-#### 🙏 Credits
-Special thanks to [llegomark](https://github.com/llegomark) for the `ag-telemetry` foundation.
 
 ---
 [Open VSX](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck) | [GitHub](https://github.com/the-long-ride/antigravity-quota-quickcheck) | [Changelog](CHANGELOG.md) | [MIT License](LICENSE)
