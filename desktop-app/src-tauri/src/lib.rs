@@ -122,11 +122,13 @@ fn set_window_height(window: tauri::WebviewWindow, height: u32) {
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 fn is_debug() -> bool {
     cfg!(debug_assertions)
 }
 
 #[tauri::command]
+#[allow(dead_code)]
 fn get_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }

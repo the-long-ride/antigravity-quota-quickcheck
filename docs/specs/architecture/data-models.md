@@ -13,7 +13,7 @@ last_verified_at: "2026-10-29T23:40:00Z"
 last_verified_code_commit: "ff75352"
 last_source_change_commit: "ff75352"
 last_source_change_at: "2026-10-29T23:36:49+07:00"
-source_fingerprint: "sha256:31102c0b5f6fc45d18dc9443d4aee626c26f099898d954ddbd7ee4e5a59c098b"
+source_fingerprint: "sha256:adaf2fb1d58186a2fbeaea59559c2244fcd4c51f8e5a35603088b14acbe9796c"
 ---
 
 # Canonical model pools and account plan tiers

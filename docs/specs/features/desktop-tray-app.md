@@ -13,7 +13,7 @@ last_verified_at: "2026-10-30T00:12:00Z"
 last_verified_code_commit: "9188bdb"
 last_source_change_commit: "9188bdb"
 last_source_change_at: "2026-10-30T00:04:35+07:00"
-source_fingerprint: "sha256:6f3ced4df8e76c3f3e7c45e5104b8854da507bc2239f366d13452545a88f4948"
+source_fingerprint: "sha256:a98964b1470c9a7386e438ea6ac1268c121328889699420984c53ccf1acd7f54"
 ---
 
 # Desktop system tray dashboard application

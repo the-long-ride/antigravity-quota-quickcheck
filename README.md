@@ -1,8 +1,12 @@
-# Google AI Quota Quickcheck
+# Antigravity Quota Quickcheck
 
-[![Open VSX](https://img.shields.io/open-vsx/v/the-long-ride/antigravity-quota-quickcheck?color=black&logo=open-vsx&logoColor=white)](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
-[![Desktop Downloads](https://img.shields.io/github/downloads/the-long-ride/antigravity-quota-quickcheck/total?color=black&logo=github&logoColor=white&label=desktop%20downloads)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-black)](https://opensource.org/licenses/MIT)
+[![Antigravity](https://img.shields.io/badge/Antigravity-%E2%9C%93-ffffff?labelColor=000000)](https://antigravity.google/)
+[![Antigravity IDE](https://img.shields.io/badge/Antigravity%20IDE-%E2%9C%93-ffffff?labelColor=000000)](https://antigravity.google/)
+[![Antigravity CLI](https://img.shields.io/badge/Antigravity%20CLI-%E2%9C%93-ffffff?labelColor=000000)](https://antigravity.google/)
+[![Visual Studio Marketplace](https://vsmarketplacebadges.dev/version/the-long-ride.antigravity-quota-quickcheck.svg?color=ffffff&labelColor=000000&label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=the-long-ride.antigravity-quota-quickcheck)
+[![Open VSX](https://img.shields.io/open-vsx/v/the-long-ride/antigravity-quota-quickcheck?color=ffffff&labelColor=000000&logo=Open-Vsx&logoColor=white&label=Open%20VSX)](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
+[![Desktop Downloads](https://img.shields.io/github/downloads/the-long-ride/antigravity-quota-quickcheck/total?color=ffffff&labelColor=000000&logo=github&logoColor=white&label=Desktop%20downloads)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-ffffff?labelColor=000000)](https://opensource.org/licenses/MIT)
 
 > **One click. Zero distraction. Full control.**
 
@@ -48,7 +52,8 @@ The project includes a **Tauri-powered standalone desktop tray application** to 
 ### Installation
 
 #### VS Code Extension
-- **Marketplace**: Install via [Open VSX Registry](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
+- **Visual Studio Marketplace**: Install from [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=the-long-ride.antigravity-quota-quickcheck)
+- **Open VSX**: Install via [Open VSX Registry](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck)
 - **Manual**: Download the `.vsix` from releases, then `Extensions: Install from VSIX...` in VS Code.
 
 #### Standalone Desktop App
@@ -56,4 +61,4 @@ The project includes a **Tauri-powered standalone desktop tray application** to 
 - **Linux**: Download the [.deb package](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest) from the [latest GitHub release](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases/latest).
 
 ---
-[Open VSX](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck) | [GitHub](https://github.com/the-long-ride/antigravity-quota-quickcheck) | [Changelog](CHANGELOG.md) | [MIT License](LICENSE)
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=the-long-ride.antigravity-quota-quickcheck) | [Open VSX](https://open-vsx.org/extension/the-long-ride/antigravity-quota-quickcheck) | [GitHub](https://github.com/the-long-ride/antigravity-quota-quickcheck) | [Changelog](CHANGELOG.md) | [MIT License](LICENSE)
