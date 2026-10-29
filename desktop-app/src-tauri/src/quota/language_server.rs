@@ -245,10 +245,7 @@ fn parse_full_status(raw: Value, quota_summary: Value) -> Result<FullStatus, Pro
             CreditInfo { balance, credit_type }
         });
 
-    let plan_tier = raw
-        .pointer("/userStatus/userTier/name")
-        .and_then(Value::as_str)
-        .map(str::to_string);
+    let plan_tier = super::extract_plan_tier(&raw).or_else(|| super::extract_plan_tier(&quota_summary));
 
     #[derive(Clone)]
     struct Bucket {
@@ -351,20 +348,39 @@ fn parse_full_status(raw: Value, quota_summary: Value) -> Result<FullStatus, Pro
                 model: label.to_string(),
                 percent: five_hour_percent,
                 refresh_time: if five_hour_reset.is_empty() { "Exhausted".to_string() } else { five_hour_reset.clone() },
-                five_hour_percent,
-                five_hour_reset,
-                five_hour_disabled,
-                weekly_percent,
-                weekly_reset,
-                weekly_disabled,
+                five_hour_percent: Some(five_hour_percent),
+                five_hour_reset: if five_hour_reset.is_empty() { None } else { Some(five_hour_reset) },
+                five_hour_disabled: Some(five_hour_disabled),
+                weekly_percent: Some(weekly_percent),
+                weekly_reset: if weekly_reset.is_empty() { None } else { Some(weekly_reset) },
+                weekly_disabled: Some(weekly_disabled),
             });
         }
     }
 
+    let is_argon_label = |value: &str| -> bool {
+        let lower = value.to_lowercase();
+        lower.contains("argon") || lower.contains("gemini-4") || lower.contains("gemini_4") || lower.contains("gemini 4")
+    };
+
     let mut grouped = Vec::new();
-    if let Some(quota) = quotas.iter().find(|quota| quota.model.to_lowercase().contains("gemini")) {
+    if let Some(quota) = quotas.iter().find(|quota| !is_argon_label(&quota.model) && quota.model.to_lowercase().contains("gemini")) {
         let mut quota = quota.clone();
         quota.model = "Gemini".to_string();
+        grouped.push(quota);
+    }
+    if let Some(quota) = quotas.iter().find(|quota| is_argon_label(&quota.model)) {
+        let mut quota = quota.clone();
+        quota.model = "Gemini 4 Argon".to_string();
+        quota.percent = quota.weekly_percent.unwrap_or(0);
+        quota.refresh_time = if quota.weekly_disabled.unwrap_or(false) {
+            "Disabled".to_string()
+        } else {
+            quota.weekly_reset.clone().unwrap_or_else(|| "Ready".to_string())
+        };
+        quota.five_hour_percent = None;
+        quota.five_hour_reset = None;
+        quota.five_hour_disabled = None;
         grouped.push(quota);
     }
     if let Some(quota) = quotas.iter().find(|quota| {

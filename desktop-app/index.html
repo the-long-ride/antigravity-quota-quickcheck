@@ -28,17 +28,18 @@
           <span class="app-title">Antigravity Quota Quickcheck</span>
         </div>
         <div class="header-right">
-          <button class="update-btn" id="update-btn" title="New version available" style="display: none;">
+          <a class="app-version-link" id="app-version-link" href="#" data-tooltip="View Changelog on GitHub">v1.3.2</a>
+          <button class="update-btn" id="update-btn" data-tooltip="New version available" style="display: none;">
             <svg class="update-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 15V3m0 12l-4-4m4 4l4-4M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <button class="refresh-btn" id="refresh-btn" title="Force Refresh">
+          <button class="refresh-btn" id="refresh-btn" data-tooltip="Force Refresh">
             <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l.73-.73" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <button class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode">
+          <button class="theme-toggle" id="theme-toggle" data-tooltip="Toggle dark/light mode">
             <!-- Moon (dark mode icon, shown in light mode) -->
             <svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -84,7 +85,7 @@
 
         <!-- Quotas List Section -->
         <section class="quotas-section">
-          <h3 class="section-title">Model Quotas <span class="subtitle">(Click to monitor in tray)</span></h3>
+          <h3 class="section-title">Quotas <span class="subtitle">- Periods & reset time</span></h3>
           <div class="quotas-list" id="quotas-list">
             <!-- Dynamic list items will go here -->
             <div class="loading-state">
@@ -101,13 +102,13 @@
           <input type="number" id="poll-interval" min="5" max="3600" value="30" class="setting-input" />
         </div>
         <div class="footer-links">
-          <span class="footer-attr">made by <a href="https://github.com/the-long-ride" class="footer-link footer-link--author" id="author-link">the-long-ride</a> with ❤️</span>
+          <span class="footer-attr">made by <a href="https://github.com/the-long-ride" class="footer-link footer-link--author" id="author-link" data-tooltip="Author GitHub profile">the-long-ride</a> with ❤️</span>
           <span class="footer-link-sep">·</span>
-          <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck" class="footer-link" id="github-link">GitHub</a>
+          <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck" class="footer-link" id="github-link" data-tooltip="View repository on GitHub">GitHub</a>
           <span class="footer-link-sep">·</span>
-          <a href="https://github.com/the-long-ride/QuotaShift/releases/latest" class="footer-link" id="quotashift-link" title="QuotaShift: multiple-account switching and monitoring for Antigravity, Codex and Claude">QuotaShift</a>
+          <a href="https://github.com/the-long-ride/QuotaShift/releases/latest" class="footer-link" id="quotashift-link" data-tooltip="QuotaShift: multiple-account switching and monitoring for Antigravity, Codex and Claude">QuotaShift</a>
           <span class="footer-link-sep">·</span>
-          <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new" class="footer-link" id="report-issue-link">Report Issue</a>
+          <a href="https://github.com/the-long-ride/antigravity-quota-quickcheck/issues/new" class="footer-link" id="report-issue-link" data-tooltip="Report an issue on GitHub">Report Issue</a>
         </div>
       </footer>
     </div>

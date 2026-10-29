@@ -3,7 +3,9 @@ out/
 *.vsix
 desktop-app/src-tauri/target/
 desktop-app/dist/
+desktop-app/release/
 .env
 *.local
 .DS_Store
 Thumbs.db
+docs/superpowers/

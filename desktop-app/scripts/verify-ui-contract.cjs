@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 
 const config = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
 const main = config.app.windows.find((w) => w.label === 'main');
-assert.equal(main.width, 680);
-assert.equal(main.height, 420);
+assert.equal(main.width, 598);
+assert.equal(main.height, 470);
 assert.equal(config.bundle.windows.nsis.installerHooks, 'installer-hooks.nsh');
 
 const mainTs = fs.readFileSync('src/main.ts', 'utf8');
@@ -16,6 +16,11 @@ assert.match(styles, /\.app-content[\s\S]*?padding:\s*10px/);
 
 const indexHtml = fs.readFileSync('index.html', 'utf8');
 assert.match(indexHtml, /<link rel="stylesheet" href="\/src\/layout-fixes\.css" \/>/);
+assert.doesNotMatch(indexHtml, /<(button|a)[^>]*?\btitle=/i);
+assert.match(indexHtml, /data-tooltip="Force Refresh"/);
+assert.match(indexHtml, /data-tooltip="Toggle dark\/light mode"/);
+assert.match(styles, /\.floating-tooltip[\s\S]*?position:\s*fixed/);
+assert.match(mainTs, /initFloatingTooltips/);
 const layoutFixes = fs.readFileSync('src/layout-fixes.css', 'utf8');
 assert.match(layoutFixes, /\.quotas-section[\s\S]*?flex:\s*1\s+1\s+auto/);
 assert.match(layoutFixes, /\.quotas-list[\s\S]*?flex:\s*1\s+1\s+auto/);

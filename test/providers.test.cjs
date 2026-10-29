@@ -180,13 +180,22 @@ test('Cloud Code fixture normalizes Google AI subscription, credits, and provide
   assert.equal(shared.weeklyDisabled, true);
 });
 
-test('Cloud Code plan falls back to tier id when no human-readable name exists', () => {
+test('Cloud Code normalizes g1-pro-tier id to Google AI Pro', () => {
   const status = parseCloudCodeStatus(
     { paidTier: { id: 'g1-pro-tier' } },
     {},
     {},
   );
-  assert.equal(status.planTier, 'g1-pro-tier');
+  assert.equal(status.planTier, 'Google AI Pro');
+});
+
+test('Cloud Code plan falls back to unknown tier id when unmapped', () => {
+  const status = parseCloudCodeStatus(
+    { paidTier: { id: 'custom-tier' } },
+    {},
+    {},
+  );
+  assert.equal(status.planTier, 'custom-tier');
 });
 
 test('Cloud Code parser preserves explicit windows and numeric strings', () => {
@@ -234,4 +243,183 @@ test('Cloud Code parser preserves explicit windows and numeric strings', () => {
   assert.equal(shared.fiveHourDisabled, false);
   assert.equal(shared.weeklyPercent, 0);
   assert.equal(shared.weeklyDisabled, true);
+});
+
+test('agy parser handles separate Gemini 4 Argon group without replacing Gemini weekly', () => {
+  const payload = {
+    command: {
+      data: {
+        groups: [
+          {
+            name: 'Gemini Models',
+            buckets: [
+              {
+                window: 'weekly',
+                remaining_fraction: 0.33,
+                reset_time: '2026-11-03T17:42:05Z',
+              },
+              {
+                window: '5h',
+                remaining_fraction: 0.83,
+                reset_time: '2026-10-29T09:47:49Z',
+              },
+            ],
+          },
+          {
+            name: 'Claude and GPT models',
+            buckets: [
+              {
+                window: 'weekly',
+                remaining_fraction: 1,
+                reset_time: '2026-11-05T07:57:13Z',
+              },
+              {
+                window: '5h',
+                remaining_fraction: 1,
+                reset_time: '2026-10-29T12:57:13Z',
+              },
+            ],
+          },
+          {
+            name: 'Gemini 4 Argon',
+            buckets: [
+              {
+                window: 'weekly',
+                remaining_fraction: 0.12,
+                reset_time: '2026-11-03T17:23:57Z',
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+
+  const status = parseAgyQuotaEnvelope(JSON.stringify(payload));
+  assert.equal(status.quotas.length, 3);
+  assert.deepEqual(status.quotas.map((q) => q.model), ['Gemini', 'Gemini 4 Argon', 'Claude & OpenAI']);
+
+  const gemini = status.quotas[0];
+  assert.equal(gemini.fiveHourPercent, 83);
+  assert.equal(gemini.weeklyPercent, 33); // Must NOT be replaced by 12%
+
+  const argon = status.quotas[1];
+  assert.equal(argon.fiveHourPercent, undefined);
+  assert.equal(argon.weeklyPercent, 12);
+  assert.equal(argon.weeklyReset, '2026-11-03T17:23:57Z');
+
+  const claude = status.quotas[2];
+  assert.equal(claude.fiveHourPercent, 100);
+  assert.equal(claude.weeklyPercent, 100);
+  assert.equal(argon.fiveHourPercent, undefined);
+  assert.equal(argon.weeklyPercent, 12);
+  assert.equal(argon.weeklyReset, '2026-11-03T17:23:57Z');
+});
+
+test('Cloud Code parser handles distinct Argon pool and preserves Gemini weekly', () => {
+  const status = parseCloudCodeStatus(
+    { paidTier: { name: 'Google AI Pro' } },
+    {
+      buckets: [
+        {
+          modelId: 'gemini-3-pro',
+          window: '5h',
+          remainingFraction: 0.83,
+          resetTime: '2026-10-29T09:47:49Z',
+        },
+        {
+          modelId: 'gemini-3-pro',
+          window: 'weekly',
+          remainingFraction: 0.33,
+          resetTime: '2026-11-03T17:42:05Z',
+        },
+        {
+          modelId: 'gemini-4-argon',
+          remainingFraction: 0.12,
+          resetTime: '2026-11-03T17:23:57Z',
+        },
+      ],
+    },
+    {},
+  );
+
+  assert.equal(status.quotas.length, 3);
+  assert.deepEqual(status.quotas.map((q) => q.model), ['Gemini', 'Gemini 4 Argon', 'Claude & OpenAI']);
+
+  const gemini = status.quotas[0];
+  assert.equal(gemini.fiveHourPercent, 83);
+  assert.equal(gemini.weeklyPercent, 33); // Must NOT be replaced by Argon
+
+  const argon = status.quotas[1];
+  assert.equal(argon.fiveHourPercent, undefined);
+  assert.equal(argon.weeklyPercent, 12);
+});
+
+test('Cloud Code parser merges Argon when signature matches Gemini weekly', () => {
+  const status = parseCloudCodeStatus(
+    { paidTier: { name: 'Google AI Ultra' } },
+    {
+      buckets: [
+        {
+          modelId: 'gemini-3-pro',
+          window: '5h',
+          remainingFraction: 0.85,
+          resetTime: '2026-10-29T09:47:49Z',
+        },
+        {
+          modelId: 'gemini-3-pro',
+          window: 'weekly',
+          remainingFraction: 0.70,
+          resetTime: '2026-11-03T17:42:05Z',
+        },
+      ],
+    },
+    {
+      models: {
+        'gemini-4-argon': {
+          quotaInfo: {
+            remainingFraction: 0.70,
+            resetTime: '2026-11-03T17:42:05Z',
+          },
+        },
+      },
+    },
+  );
+
+  assert.equal(status.quotas.length, 2);
+  assert.deepEqual(status.quotas.map((q) => q.model), ['Gemini', 'Claude & OpenAI']);
+  assert.equal(status.quotas[0].weeklyPercent, 70);
+});
+
+test('Cloud Code normalizes planType from planInfo', () => {
+  const status = parseCloudCodeStatus(
+    { planInfo: { planType: 'advanced-tier' } },
+    {},
+    {},
+  );
+  assert.equal(status.planTier, 'Google AI Pro');
+});
+
+test('Agy CLI parser normalizes planTier and aliases', () => {
+  const payload = {
+    command: {
+      data: {
+        planTier: 'ultra-tier',
+        groups: [
+          {
+            name: 'Gemini Models',
+            buckets: [
+              {
+                window: '5h',
+                remaining_fraction: 0.8,
+                reset_time: '2026-10-29T09:47:49Z',
+              },
+            ],
+          },
+        ],
+      },
+    },
+  };
+  const status = parseAgyQuotaEnvelope(JSON.stringify(payload));
+  assert.equal(status.planTier, 'Google AI Ultra');
 });

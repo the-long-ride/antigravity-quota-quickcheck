@@ -1,14 +1,17 @@
-# 🖥️ Antigravity Quota Quickcheck — Desktop App
+# Antigravity Quota Quickcheck — Desktop App
+
+[![Desktop Downloads](https://img.shields.io/github/downloads/the-long-ride/antigravity-quota-quickcheck/total?color=black&logo=github&logoColor=white&label=desktop%20downloads)](https://github.com/the-long-ride/antigravity-quota-quickcheck/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black)](https://opensource.org/licenses/MIT)
 
 A Tauri-powered standalone tray application that monitors the current Antigravity login's Google AI model quotas and credit balances in real-time. It runs quietly in your system tray and lets you keep track of your quotas even when VS Code is closed.
 
 > Need multiple accounts or providers? [**QuotaShift**](https://github.com/the-long-ride/QuotaShift/releases/latest) adds multiple-account switching and monitoring for **Antigravity, Codex and Claude**.
 
-## 📸 Preview
+## Preview
 
-![Desktop App Tray Click Preview](../assets/demo-pics/Desktop-app-tray-click.png)
+![Desktop App Tray Click Preview](https://raw.githubusercontent.com/the-long-ride/antigravity-quota-quickcheck/main/assets/demo-pics/Desktop-app-tray-click.png)
 
-## 🚀 Key Features
+## Key Features
 
 - **System Tray Tooltip**: Quietly displays your active model name along with 5-hour and Weekly limits (`5h` and `wk`) in a highly optimized format to avoid OS-level tooltip truncation.
 - **Double-Limit Monitoring**: Real-time tracking of both the **5-Hour Limit** and **Weekly Limit** concurrently.
@@ -20,7 +23,7 @@ A Tauri-powered standalone tray application that monitors the current Antigravit
 - **Custom Dialogs**: Clean, monochromatic modal overlays used instead of native alert/confirm popups.
 - **Exhaustion Visuals**: Exhausted/disabled models are dimmed with a dashed border, and selecting them is blocked.
 
-## 🛠️ Development
+## Development
 
 ### Setup
 

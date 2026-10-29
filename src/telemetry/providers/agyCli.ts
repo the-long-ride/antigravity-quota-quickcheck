@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { FullStatus, QuotaData } from '../types';
+import { extractPlanTier } from '../parser';
 import { ProviderError, ProviderErrorKind, isUsableStatus } from './types';
 
 const PROVIDER = 'agy CLI';
@@ -177,6 +178,16 @@ function buildCard(model: string, windows: ProviderWindows): QuotaData {
   };
 }
 
+function isArgonGroup(name: string): boolean {
+  const lower = name.toLowerCase();
+  return (
+    lower.includes('argon') ||
+    lower.includes('gemini-4') ||
+    lower.includes('gemini_4') ||
+    lower.includes('gemini 4')
+  );
+}
+
 export function parseAgyQuotaEnvelope(raw: string): FullStatus {
   let root: any;
   try {
@@ -200,14 +211,19 @@ export function parseAgyQuotaEnvelope(raw: string): FullStatus {
 
   const gemini = emptyProviderWindows();
   const shared = emptyProviderWindows();
+  const argon = emptyProviderWindows();
   let sawRecognizedGroup = false;
 
   for (const group of data.groups) {
     const rawName = group?.name ?? group?.displayName ?? '';
     const name = typeof rawName === 'string' ? rawName.toLowerCase() : '';
 
+    const isArgon = isArgonGroup(name);
     let target: ProviderWindows | null = null;
-    if (name.includes('gemini')) {
+    if (isArgon) {
+      target = argon;
+      sawRecognizedGroup = true;
+    } else if (name.includes('gemini')) {
       target = gemini;
       sawRecognizedGroup = true;
     } else if (
@@ -228,7 +244,7 @@ export function parseAgyQuotaEnvelope(raw: string): FullStatus {
       const window = windowName(bucket);
       if (isFiveHourWindow(window)) {
         assignWindow(target.fiveHour, percent, reset);
-      } else if (isWeeklyWindow(window)) {
+      } else if (isWeeklyWindow(window) || (isArgon && (!window || window === 'unknown'))) {
         assignWindow(target.weekly, percent, reset);
       }
     }
@@ -242,17 +258,33 @@ export function parseAgyQuotaEnvelope(raw: string): FullStatus {
     );
   }
 
-  const tierCandidate = data.planTier ?? data.plan_tier ?? data.tier;
-  const planTier = typeof tierCandidate === 'string' && tierCandidate
-    ? tierCandidate
-    : null;
+  const planTier = extractPlanTier(data);
+
+  const quotas: QuotaData[] = [
+    buildCard('Gemini', gemini),
+  ];
+
+  if (argon.weekly.present || argon.fiveHour.present) {
+    const percent = argon.weekly.present ? argon.weekly.percent : argon.fiveHour.percent;
+    const reset = argon.weekly.present ? argon.weekly.reset : argon.fiveHour.reset;
+    quotas.push({
+      model: 'Gemini 4 Argon',
+      percent,
+      refreshTime: reset || 'Ready',
+      fiveHourPercent: undefined,
+      fiveHourReset: undefined,
+      fiveHourDisabled: undefined,
+      weeklyPercent: percent,
+      weeklyReset: reset || undefined,
+      weeklyDisabled: false,
+    });
+  }
+
+  quotas.push(buildCard('Claude & OpenAI', shared));
 
   return {
     credits: null,
-    quotas: [
-      buildCard('Gemini', gemini),
-      buildCard('Claude & OpenAI', shared),
-    ],
+    quotas,
     recentlyUsedModel: null,
     planTier,
   };

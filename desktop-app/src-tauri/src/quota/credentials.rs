@@ -12,7 +12,9 @@ use super::process::hide_tokio_command;
 use super::{ProviderError, ProviderErrorKind};
 
 const PROVIDER: &str = "agy credentials";
+#[allow(dead_code)]
 const KEYRING_SERVICE: &str = "gemini";
+#[allow(dead_code)]
 const KEYRING_ACCOUNT: &str = "antigravity";
 const KEYRING_TARGET_WINDOWS: &str = "gemini:antigravity";
 const KEYRING_TIMEOUT: Duration = Duration::from_secs(5);

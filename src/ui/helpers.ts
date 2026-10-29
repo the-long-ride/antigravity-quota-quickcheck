@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
-export function buildBar(percent: number, total: number = 8): string {
+export function buildBar(percent: number | undefined, total: number = 8): string {
+    if (percent === undefined) return '—';
     const filled = Math.round((percent / 100) * total);
     return '█'.repeat(filled).padEnd(total, '░');
 }

@@ -2,7 +2,7 @@
   "name": "antigravity-quota-quickcheck",
   "displayName": "Antigravity Quota Quickcheck",
   "description": "Monitor your Google AI model quotas and credit balance directly from your Antigravity status bar with 1 click or hovering.",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "publisher": "the-long-ride",
   "icon": "assets/icons/logo.png",
   "repository": {
@@ -20,13 +20,6 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
-  "files": [
-    "out/**",
-    "assets/**",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
-  ],
   "contributes": {
     "commands": [
       {
@@ -40,6 +33,10 @@
       {
         "command": "antigravity-quota.toggleUsage",
         "title": "Toggle Status Bar Usage Display"
+      },
+      {
+        "command": "antigravity-quota.toggleCredits",
+        "title": "Toggle Status Bar AI Credits Display"
       }
     ],
     "configuration": {
@@ -54,6 +51,11 @@
           "type": "string",
           "default": "",
           "description": "The specific Gemini model to monitor in the status bar."
+        },
+        "antigravity-quota.showCreditsInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show AI credits balance alongside the model quota in the status bar."
         }
       }
     }
