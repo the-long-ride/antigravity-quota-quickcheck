@@ -2,7 +2,7 @@ import { FullStatus } from './types';
 import { fetchFromProviders } from './providers';
 
 export * from './types';
-export { formatAbsoluteTime, resolveQuotaModelName } from './parser';
+export { formatAbsoluteTime, resolveQuotaModelName, isArgonPoolModel } from './parser';
 
 type StatusFetch = (force: boolean) => Promise<FullStatus>;
 

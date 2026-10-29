@@ -53,7 +53,7 @@ export function requestJson(
       reject(error);
     };
 
-    const req = https.request(url, { method, headers }, (res) => {
+    const req = https.request(new URL(url), { method, headers }, (res) => {
       const chunks: Buffer[] = [];
       let received = 0;
 

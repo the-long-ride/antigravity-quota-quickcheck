@@ -1,4 +1,5 @@
 import { CreditInfo, FullStatus, QuotaData } from '../types';
+import { extractPlanTier } from '../parser';
 import {
   AgyCredential,
   OauthClient,
@@ -153,15 +154,16 @@ function sumAvailableCredits(load: any): CreditInfo | null {
   return found ? { balance: total, creditType: 'AI' } : null;
 }
 
-function extractPlanTier(load: any): string | null {
-  const tierCandidate =
-    load?.paidTier?.name ??
-    load?.currentTier?.name ??
-    load?.paidTier?.id ??
-    load?.currentTier?.id;
-  return typeof tierCandidate === 'string' && tierCandidate
-    ? tierCandidate
-    : null;
+
+
+function isArgonModel(value: string): boolean {
+  const lower = value.toLowerCase();
+  return (
+    lower.includes('argon') ||
+    lower.includes('gemini-4') ||
+    lower.includes('gemini_4') ||
+    lower.includes('gemini 4')
+  );
 }
 
 export function parseCloudCodeStatus(
@@ -169,22 +171,31 @@ export function parseCloudCodeStatus(
   userQuota: any,
   availableModels: any,
 ): FullStatus {
-  const planTier = extractPlanTier(loadCodeAssist);
+  const planTier =
+    extractPlanTier(loadCodeAssist) ||
+    extractPlanTier(availableModels) ||
+    extractPlanTier(userQuota);
   const credits = sumAvailableCredits(loadCodeAssist);
 
   const gemini = emptyProviderPool();
   const shared = emptyProviderPool();
+  const argon = emptyProviderPool();
+  let hasUserArgon = false;
 
   if (Array.isArray(userQuota?.buckets)) {
     for (const bucket of userQuota.buckets) {
       const model = String(bucket?.modelId ?? bucket?.model_id ?? '').toLowerCase();
       const tokenType = String(bucket?.tokenType ?? bucket?.token_type ?? '').toLowerCase();
-      const target = model.includes('gemini') || tokenType === 'requests'
-        ? gemini
-        : isSharedModel(model)
-          ? shared
-          : null;
+      const isArgon = isArgonModel(model);
+      const target = isArgon
+        ? argon
+        : model.includes('gemini') || tokenType === 'requests'
+          ? gemini
+          : isSharedModel(model)
+            ? shared
+            : null;
       if (!target) continue;
+      if (isArgon) hasUserArgon = true;
 
       const percent = remainingPercent(bucket);
       if (percent === null) continue;
@@ -192,7 +203,7 @@ export function parseCloudCodeStatus(
       mergePool(target.generic, percent, reset);
       const window = explicitWindow(bucket);
       if (window === '5h') mergePool(target.fiveHour, percent, reset);
-      if (window === 'weekly') mergePool(target.weekly, percent, reset);
+      if (window === 'weekly' || (isArgon && !window)) mergePool(target.weekly, percent, reset);
     }
   }
 
@@ -202,11 +213,14 @@ export function parseCloudCodeStatus(
       const identity = [id, entry?.model ?? '', entry?.displayName ?? '']
         .join(' ')
         .toLowerCase();
-      const target = identity.includes('gemini')
-        ? gemini
-        : isSharedModel(identity)
-          ? shared
-          : null;
+      const isArgon = isArgonModel(identity);
+      const target = isArgon
+        ? argon
+        : identity.includes('gemini')
+          ? gemini
+          : isSharedModel(identity)
+            ? shared
+            : null;
       if (!target) continue;
 
       const quotaInfo = entry?.quotaInfo ?? entry?.quota_info ?? entry;
@@ -216,8 +230,31 @@ export function parseCloudCodeStatus(
       mergePool(target.generic, percent, reset);
       const window = explicitWindow(quotaInfo);
       if (window === '5h') mergePool(target.fiveHour, percent, reset);
-      if (window === 'weekly') mergePool(target.weekly, percent, reset);
+      if (window === 'weekly' || (isArgon && !window)) mergePool(target.weekly, percent, reset);
     }
+  }
+
+  if (!argon.weekly.present && argon.generic.present) {
+    argon.weekly = { ...argon.generic };
+  }
+
+  const argonPresent = argon.generic.present || argon.weekly.present;
+  let mergeArgonIntoGemini = false;
+  const geminiSigPct = gemini.weekly.present ? gemini.weekly.percent : gemini.generic.percent;
+  const geminiSigReset = gemini.weekly.present ? gemini.weekly.reset : gemini.generic.reset;
+  const sharesGeminiSignature =
+    (gemini.generic.present || gemini.weekly.present) &&
+    argon.weekly.percent === geminiSigPct &&
+    argon.weekly.reset === geminiSigReset;
+
+  const hasDistinctUserArgon = hasUserArgon && !sharesGeminiSignature;
+  if (argonPresent && !hasDistinctUserArgon && sharesGeminiSignature) {
+    mergeArgonIntoGemini = true;
+  }
+
+  if (mergeArgonIntoGemini) {
+    mergePool(gemini.generic, argon.generic.percent, argon.generic.reset);
+    mergePool(gemini.weekly, argon.weekly.percent, argon.weekly.reset);
   }
 
   const hasPoolData = [
@@ -227,13 +264,30 @@ export function parseCloudCodeStatus(
     shared.generic,
     shared.fiveHour,
     shared.weekly,
-  ].some((value) => value.present);
+  ].some((value) => value.present) || argonPresent;
+
+  const quotas: QuotaData[] = [];
+  if (hasPoolData) {
+    quotas.push(buildCard('Gemini', gemini));
+    if (!mergeArgonIntoGemini && argonPresent) {
+      quotas.push({
+        model: 'Gemini 4 Argon',
+        percent: argon.weekly.percent,
+        refreshTime: argon.weekly.reset || 'Ready',
+        fiveHourPercent: undefined,
+        fiveHourReset: undefined,
+        fiveHourDisabled: undefined,
+        weeklyPercent: argon.weekly.percent,
+        weeklyReset: argon.weekly.reset || undefined,
+        weeklyDisabled: false,
+      });
+    }
+    quotas.push(buildCard('Claude & OpenAI', shared));
+  }
 
   const status: FullStatus = {
     credits,
-    quotas: hasPoolData
-      ? [buildCard('Gemini', gemini), buildCard('Claude & OpenAI', shared)]
-      : [],
+    quotas,
     recentlyUsedModel: null,
     planTier,
   };
@@ -249,18 +303,20 @@ export function parseCloudCodeStatus(
   return status;
 }
 
-function cloudMetadata(): Record<string, string> {
-  const platform = process.platform === 'win32'
-    ? 'WINDOWS'
-    : process.platform === 'darwin'
-      ? 'DARWIN'
-      : 'LINUX';
+function platformMetadata(): number {
+  const platform = process.platform;
+  const arch = process.arch;
+  if (platform === 'darwin') return arch === 'arm64' ? 2 : 1;
+  if (platform === 'linux') return arch === 'arm64' ? 4 : 3;
+  if (platform === 'win32') return 5;
+  return 0;
+}
+
+function cloudMetadata(): Record<string, unknown> {
   return {
-    ideName: 'antigravity',
-    ideType: 'ANTIGRAVITY',
-    platform,
-    pluginType: 'GEMINI',
-    updateChannel: 'stable',
+    ideType: 9,
+    platform: platformMetadata(),
+    pluginType: 2,
   };
 }
 
@@ -425,7 +481,16 @@ export async function fetchCloudCodePlanTier(force: boolean = false): Promise<st
     metadata: cloudMetadata(),
     mode: 'FULL_ELIGIBILITY_CHECK',
   });
-  const planTier = extractPlanTier(load);
+  let planTier = extractPlanTier(load);
+  if (!planTier) {
+    const project = extractProjectId(load);
+    const models = await optionalCloudCall(
+      'fetchAvailableModels',
+      accessToken,
+      project ? { project } : {},
+    );
+    planTier = extractPlanTier(models);
+  }
   if (planTier) {
     planTierCache = {
       value: planTier,
@@ -474,17 +539,20 @@ export async function fetchCloudCode(force: boolean): Promise<FullStatus> {
       optionalCloudCall('retrieveUserQuota', accessToken, {}),
     ]);
 
-    const planTier = extractPlanTier(load);
-    if (planTier) {
-      planTierCache = { value: planTier, expiresAt: Date.now() + PLAN_TIER_CACHE_MS };
-    }
-
     const project = extractProjectId(load);
     const models = await optionalCloudCall(
       'fetchAvailableModels',
       accessToken,
       project ? { project } : {},
     );
+
+    const planTier =
+      extractPlanTier(load) ||
+      extractPlanTier(models) ||
+      extractPlanTier(quota);
+    if (planTier) {
+      planTierCache = { value: planTier, expiresAt: Date.now() + PLAN_TIER_CACHE_MS };
+    }
 
     return parseCloudCodeStatus(load, quota, models);
   } catch (error) {

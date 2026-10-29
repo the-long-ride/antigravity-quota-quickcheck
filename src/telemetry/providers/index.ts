@@ -49,9 +49,26 @@ export function fetchFromProvidersWith(
 }
 
 async function enrichCliSubscription(status: FullStatus, force: boolean): Promise<void> {
-  const planTier = await fetchCloudCodePlanTier(force);
-  if (planTier) {
-    status.planTier = planTier;
+  if (status.planTier) {
+    return;
+  }
+  try {
+    const planTier = await fetchCloudCodePlanTier(force);
+    if (planTier) {
+      status.planTier = planTier;
+      return;
+    }
+  } catch {
+    // Subscription enrichment is optional; quota data remains authoritative.
+  }
+
+  try {
+    const lsStatus = await fetchLanguageServer(false);
+    if (lsStatus?.planTier) {
+      status.planTier = lsStatus.planTier;
+    }
+  } catch {
+    // Both enrichment attempts failed; quota data remains authoritative.
   }
 }
 

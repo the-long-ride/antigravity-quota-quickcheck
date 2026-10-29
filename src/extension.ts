@@ -1,8 +1,6 @@
 import * as vscode from "vscode";
-import { refreshStatusBar } from "./ui/statusBar";
+import { refreshStatusBar, updateStatusBarSync } from "./ui/statusBar";
 import { showQuotaPopup } from "./ui/quickPick";
-import { buildTooltip } from "./ui/tooltip";
-
 
 // Polling interval for status bar refresh (default 30 seconds)
 let pollIntervalMs = 30_000;
@@ -17,23 +15,15 @@ export function activate(context: vscode.ExtensionContext) {
     100,
   );
   myStatusBarItem.command = "antigravity-quota.check";
-  const showUsage = vscode.workspace
-    .getConfiguration("antigravity-quota")
-    .get<boolean>("showUsageInStatusBar", true);
-  myStatusBarItem.text = showUsage
-    ? `$(credit-card) Credits: ...`
-    : `$(credit-card) Quota`;
-  myStatusBarItem.tooltip = buildTooltip(null, extensionUri);
+  updateStatusBarSync(myStatusBarItem, extensionUri);
   myStatusBarItem.show();
 
   context.subscriptions.push(myStatusBarItem);
 
-  // Register the click command — shows the live QuickPick popup
+  // Register the click command — opens the live QuickPick popup IMMEDIATELY without awaiting network
   context.subscriptions.push(
-    vscode.commands.registerCommand("antigravity-quota.check", async () => {
-      // Force refresh status bar and cache immediately
-      await refreshStatusBar(myStatusBarItem, extensionUri, true);
-      showQuotaPopup(extensionUri);
+    vscode.commands.registerCommand("antigravity-quota.check", () => {
+      showQuotaPopup(extensionUri, myStatusBarItem);
     }),
   );
 
@@ -73,41 +63,64 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   );
 
-
-
-  // Register toggle usage command
+  // Register toggle usage command — instant UI response
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "antigravity-quota.toggleUsage",
-      async () => {
+      () => {
         const config = vscode.workspace.getConfiguration("antigravity-quota");
         const current = config.get<boolean>("showUsageInStatusBar", true);
-        await config.update(
+        const next = !current;
+
+        // Immediately update status bar & tooltip in memory without waiting
+        updateStatusBarSync(myStatusBarItem, extensionUri, { showUsage: next });
+
+        // Persist to configuration in background
+        config.update(
           "showUsageInStatusBar",
-          !current,
+          next,
           vscode.ConfigurationTarget.Global,
         );
-
-        // Force the tooltip to refresh by momentarily hiding/showing the item
-        myStatusBarItem.hide();
-        myStatusBarItem.show();
       },
     ),
   );
 
-  // Listen for configuration changes
+  // Register toggle credits command — instant UI response
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "antigravity-quota.toggleCredits",
+      () => {
+        const config = vscode.workspace.getConfiguration("antigravity-quota");
+        const current = config.get<boolean>("showCreditsInStatusBar", true);
+        const next = !current;
+
+        // Immediately update status bar & tooltip in memory without waiting
+        updateStatusBarSync(myStatusBarItem, extensionUri, { showCredits: next });
+
+        // Persist to configuration in background
+        config.update(
+          "showCreditsInStatusBar",
+          next,
+          vscode.ConfigurationTarget.Global,
+        );
+      },
+    ),
+  );
+
+  // Listen for configuration changes — update synchronously from cache without network fetch
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (
         e.affectsConfiguration("antigravity-quota.showUsageInStatusBar") ||
+        e.affectsConfiguration("antigravity-quota.showCreditsInStatusBar") ||
         e.affectsConfiguration("antigravity-quota.monitoredModel")
       ) {
-        refreshStatusBar(myStatusBarItem, extensionUri);
+        updateStatusBarSync(myStatusBarItem, extensionUri);
       }
     }),
   );
 
-  // Initial fetch + start polling
+  // Initial fetch + start polling in background
   refreshStatusBar(myStatusBarItem, extensionUri);
   timer = setInterval(
     () => refreshStatusBar(myStatusBarItem, extensionUri),
