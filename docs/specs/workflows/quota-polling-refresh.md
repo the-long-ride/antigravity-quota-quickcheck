@@ -13,7 +13,7 @@ last_verified_at: "2026-10-29T23:40:00Z"
 last_verified_code_commit: "ff75352"
 last_source_change_commit: "ff75352"
 last_source_change_at: "2026-10-29T23:36:49+07:00"
-source_fingerprint: "sha256:a47d054608f5646c6dbffb33958dd9ff1243f5e898bced1c2d67f236a88eac06"
+source_fingerprint: "sha256:9e90d9337a1c674b7a39047f4c703eb160bdb47e3701026385798adf9e66fa51"
 ---
 
 # Quota polling, silent execution, and refresh lifecycle

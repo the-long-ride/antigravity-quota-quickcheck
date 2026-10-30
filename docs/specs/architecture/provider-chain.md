@@ -13,7 +13,7 @@ last_verified_at: "2026-10-29T23:40:00Z"
 last_verified_code_commit: "ff75352"
 last_source_change_commit: "ff75352"
 last_source_change_at: "2026-10-29T23:36:49+07:00"
-source_fingerprint: "sha256:0c3afbac8d0135f52ed794f8415ded51b7f933372cd8256f4f80c18ff68bf106"
+source_fingerprint: "sha256:6767ebc19d97ef41f2ed4797f9810da182da963360f500a548eccd9488d7ed41"
 ---
 
 # Three-layer quota provider fallback chain

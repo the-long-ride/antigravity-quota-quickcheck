@@ -13,7 +13,7 @@ last_verified_at: "2026-10-29T23:40:00Z"
 last_verified_code_commit: "ff75352"
 last_source_change_commit: "ff75352"
 last_source_change_at: "2026-10-29T23:36:49+07:00"
-source_fingerprint: "sha256:947209e84cb8955c3c3469e68fbb5dd4191aa64a00fd7d27af41df888ecb1f08"
+source_fingerprint: "sha256:ddd8f2270b1fa50152d35dcf97c891951fbf4432dbf1f1160f737d4f6c3933ef"
 ---
 
 # VS Code extension presentation and user controls
